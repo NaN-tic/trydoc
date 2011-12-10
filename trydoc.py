@@ -18,7 +18,6 @@ from docutils import nodes
 class FieldNode(nodes.Admonition, nodes.Element): pass
 #class FieldNode(nodes.Inline, nodes.TextElement): pass
 class MenuNode(nodes.Admonition, nodes.Element): pass
-class ViewNode(nodes.Admonition, nodes.Element): pass
 
 #nodes._add_node_class_names('FieldNode')
 
@@ -119,38 +118,24 @@ class MenuDirective(Directive):
         return [targetnode] + ad
         pass
 
-class ViewDirective(Directive):
-    """
-    A todo entry, displayed (if configured) in the form of an admonition.
-    """
+from docutils.parsers.rst.directives.images import Image
 
-    has_content = True
-    required_arguments = 1
-    optional_arguments = 1
-    final_argument_whitespace = False
-    option_spec = {
-        'field': directives.unchanged,
-    }
+class ViewDirective(Image):
+    option_spec = Image.option_spec.copy()
+    option_spec.update({
+            'field': directives.unchanged,
+            })
 
     def run(self):
-        env = self.state.document.settings.env
-        targetid = 'index-%s' % env.new_serialno('index')
-        targetnode = nodes.target('', '', ids=[targetid])
-
-        view = self.arguments[0]
-
+        view = str(self.arguments[0])
         field = self.options.get('field')
 
-        content = self.content
-        block_text = 'View: %s, Field: %s' % (view, field)
-        print "View: ", view
-        print "Field: ", field
+        # TODO: Create snapshot
 
-        ad = make_admonition(ViewNode, self.name, [_('View')], self.options,
-                             content, self.lineno, self.content_offset,
-                             block_text, self.state, self.state_machine)
-        ad[0].line = self.lineno
-        return [targetnode] + ad
+        self.arguments[0] = 'tryton-test.png'
+        image_node_list = Image.run(self)
+        return image_node_list
+
 
 def process_todos(app, doctree):
     # collect all todos in the environment
@@ -203,11 +188,6 @@ def setup(app):
                  latex=(visit_menu_node, depart_menu_node),
                  text=(visit_menu_node, depart_menu_node),
                  man=(visit_menu_node, depart_menu_node))
-    app.add_node(ViewNode,
-                 html=(visit_view_node, depart_view_node),
-                 latex=(visit_view_node, depart_view_node),
-                 text=(visit_view_node, depart_view_node),
-                 man=(visit_view_node, depart_view_node))
 
     app.add_directive('field', FieldDirective)
     app.add_directive('menu', MenuDirective)
