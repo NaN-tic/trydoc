@@ -12,15 +12,13 @@ from docutils import nodes
 from sphinx.locale import _
 from sphinx.environment import NoUri
 from sphinx.util.compat import Directive, make_admonition
-from docutils.parsers.rst import directives
+from docutils.parsers.rst import directives, states
 from docutils import nodes
 
-class FieldNode(nodes.Admonition, nodes.Element): pass
-#class FieldNode(nodes.Inline, nodes.TextElement): pass
-class MenuNode(nodes.Admonition, nodes.Element): pass
+from docutils.parsers.rst.directives.images import Image
+from docutils.parsers.rst.directives.misc import Replace
 
-#nodes._add_node_class_names('FieldNode')
-
+from proteus import config, Model
 
 class FieldDirective(Directive):
     has_content = True
@@ -28,97 +26,93 @@ class FieldDirective(Directive):
     optional_arguments = 1
     final_argument_whitespace = False
     option_spec = {
-        'help': directives.flag
-    }
+            'help': directives.flag
+            }
 
     def run(self):
-        env = self.state.document.settings.env
-        targetid = 'index-%s' % env.new_serialno('index')
-        targetnode = nodes.target('', '', ids=[targetid])
-
-        print "DIR: ", dir(self)
-        print "DATA: ", self
-        print "args: ", self.arguments
-        print "\n\nOptions: ", self.options
-        print "Content: ", self.content
-        print "Line: ", self.lineno
-        print "Offset: ", self.content_offset
-        print "Block: ", self.block_text
-        print "State: ", self.state
-        print "Machine: ", self.state_machine
-        print "Name: ", self.name
-
-        field = self.arguments[0]
-
+        content = self.arguments[0]
         if 'help' in self.options:
             show_help = True
         else:
             show_help = False
 
-        print "T: ", type(self.block_text), type(self.content), dir(self.content)
-        #content = [self.content[0]]
-        content = self.content
-        #block_text = self.content[0]
-        block_text = self.block_text
-        print "T: ", type(block_text), type(content)
+        model_name, field_name = content.split('/')
 
-        print "Field: ", field
-        print "Show Help: ", show_help
+        ModelClass = Model.get('ir.model')
+        models = ModelClass.find([
+                ('model', '=', model_name),
+                ])
+        if not models:
+            return [self.state_machine.reporter.warning(
+                    'Model "%s" not found.' % model_name, line=self.lineno)]
 
+        ModelField = Model.get('ir.model.field')
+        field = ModelField.find([
+                ('name', '=', field_name),
+                ('model', '=', models[0].id),
+                ])[0]
+
+        text = ''
+        for field in models[0].fields:
+            if field.name == field_name:
+                if show_help:
+                    if field.help:
+                        text = field.help
+                    else:
+                        text = 'Field "%s" has no help available' % content
+                else:
+                    if field.field_description:
+                        text = field.field_description
+                    else:
+                        text = 'Field "%s" has no description available' % content
+                break
+
+        text = '*%s*' % text
+        return [nodes.Text(text)]
         
-        ad = make_admonition(FieldNode, self.name, [_('Field')], self.options,
-                             content, self.lineno, self.content_offset,
-                             block_text, self.state, self.state_machine)
-        ad[0].line = self.lineno
-        #ad = nodes.Element('hola manola')
-        #ad = [nodes.TextElement('hola manola','Hola Manola')]
-
-        #node = nodes.paragraph()
-        #node.document = self.state.document
-        #print "DOC: ", type(node.document), node.document
-
-        #ad = nodes.Text('HOLA MANOLA')
-        return [targetnode] + ad #+ node.children #ad
-
 class MenuDirective(Directive):
-    """
-    A todo entry, displayed (if configured) in the form of an admonition.
-    """
-
     has_content = True
     required_arguments = 1
     optional_arguments = 1
     final_argument_whitespace = False
     option_spec = {
-        # Prints only the name of the menu entry instead of its full path
-        'nameonly': directives.flag, 
-    }
+            # Prints only the name of the menu entry instead of its full path
+            'nameonly': directives.flag, 
+            }
 
     def run(self):
-        env = self.state.document.settings.env
-        targetid = 'index-%s' % env.new_serialno('index')
-        targetnode = nodes.target('', '', ids=[targetid])
-
-        menu = self.arguments[0]
-
+        content = self.arguments[0]
         if 'nameonly' in self.options:
-            name_only = True
+            show_name_only = True
         else:
-            name_only = False
+            show_name_only = False
 
-        content = self.content
-        block_text = self.block_text
-        print "Menu: ", menu
-        print "Name Only: ", name_only
+        module_name, fs_id = content.split('.')
 
-        ad = make_admonition(MenuNode, self.name, [_('Menu')], self.options,
-                             content, self.lineno, self.content_offset,
-                             block_text, self.state, self.state_machine)
-        ad[0].line = self.lineno
-        return [targetnode] + ad
-        pass
+        ModelData = Model.get('ir.model.data')
+        #db_id = ModelData.get_id(module_name, fs_id)
 
-from docutils.parsers.rst.directives.images import Image
+        records = ModelData.find([
+                ('module', '=', module_name),
+                ('fs_id', '=', fs_id),
+                ('model', '=', 'ir.ui.menu'),
+                ])
+        if not records:
+            return [self.state_machine.reporter.warning(
+                    'Menu entry "%s" not found.' % content, line=self.lineno)]
+        db_id = records[0].db_id
+
+        Menu = Model.get('ir.ui.menu')
+        menu = Menu(db_id)
+        if show_name_only:
+            text = menu.name
+        else:
+            text = menu.complete_name
+
+        text = '*%s*' % text
+
+        return [nodes.Text(text)]
+
 
 class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
@@ -137,60 +131,14 @@ class ViewDirective(Image):
         return image_node_list
 
 
-def process_todos(app, doctree):
-    # collect all todos in the environment
-    # this is not done in the directive itself because it some transformations
-    # must have already been run, e.g. substitutions
-    env = app.builder.env
-    if not hasattr(env, 'todo_all_todos'):
-        env.todo_all_todos = []
-    for node in doctree.traverse(FieldNode):
-        try:
-            targetnode = node.parent[node.parent.index(node) - 1]
-            if not isinstance(targetnode, nodes.target):
-                raise IndexError
-        except IndexError:
-            targetnode = None
-        #env.todo_all_todos.append({
-        #    'docname': env.docname,
-        #    'lineno': node.line,
-        #    'todo': node.deepcopy(),
-        #    'target': targetnode,
-        #})
-
-
-def visit_field_node(self, node):
-    self.visit_admonition(node)
-
-def depart_field_node(self, node):
-    self.depart_admonition(node)
-
-def visit_menu_node(self, node):
-    self.visit_admonition(node)
-
-def depart_menu_node(self, node):
-    self.depart_admonition(node)
-
-def visit_view_node(self, node):
-    self.visit_admonition(node)
-
-def depart_view_node(self, node):
-    self.depart_admonition(node)
+def init_proteus(app):
+    config.set_trytond(database_type='sqlite')
 
 def setup(app):
-    app.add_node(FieldNode,
-                 html=(visit_field_node, depart_field_node),
-                 latex=(visit_field_node, depart_field_node),
-                 text=(visit_field_node, depart_field_node),
-                 man=(visit_field_node, depart_field_node))
-    app.add_node(MenuNode,
-                 html=(visit_menu_node, depart_menu_node),
-                 latex=(visit_menu_node, depart_menu_node),
-                 text=(visit_menu_node, depart_menu_node),
-                 man=(visit_menu_node, depart_menu_node))
+    app.add_config_value('trydoc_server', None, 'env')
 
     app.add_directive('field', FieldDirective)
     app.add_directive('menu', MenuDirective)
     app.add_directive('view', ViewDirective)
-    app.connect('doctree-read', process_todos)
 
+    app.connect('builder-inited', init_proteus)
