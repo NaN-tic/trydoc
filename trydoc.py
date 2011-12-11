@@ -23,7 +23,6 @@ import re
 from proteus import config, Model
 
 def get_field_data(model_name, field_name, show_help):
-        print "Searching field '%s' in model '%s'." % (field_name, model_name)
         ModelClass = Model.get('ir.model')
         models = ModelClass.find([
                 ('model', '=', model_name),
