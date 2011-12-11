@@ -8,6 +8,7 @@
 """
 
 from docutils import nodes
+from docutils.transforms import Transform
 
 from sphinx.locale import _
 from sphinx.environment import NoUri
@@ -18,33 +19,17 @@ from docutils import nodes
 from docutils.parsers.rst.directives.images import Image
 from docutils.parsers.rst.directives.misc import Replace
 
+import re
 from proteus import config, Model
 
-class FieldDirective(Directive):
-    has_content = True
-    required_arguments = 1
-    optional_arguments = 1
-    final_argument_whitespace = False
-    option_spec = {
-            'help': directives.flag
-            }
-
-    def run(self):
-        content = self.arguments[0]
-        if 'help' in self.options:
-            show_help = True
-        else:
-            show_help = False
-
-        model_name, field_name = content.split('/')
-
+def get_field_data(model_name, field_name, show_help):
+        print "Searching field '%s' in model '%s'." % (field_name, model_name)
         ModelClass = Model.get('ir.model')
         models = ModelClass.find([
                 ('model', '=', model_name),
                 ])
         if not models:
-            return [self.state_machine.reporter.warning(
-                    'Model "%s" not found.' % model_name, line=self.lineno)]
+            return None
 
         ModelField = Model.get('ir.model.field')
         field = ModelField.find([
@@ -67,8 +52,57 @@ class FieldDirective(Directive):
                         text = 'Field "%s" has no description available' % content
                 break
 
-        text = '*%s*' % text
+        return '*%s*' % text
+
+
+class FieldDirective(Directive):
+    has_content = True
+    required_arguments = 1
+    optional_arguments = 1
+    final_argument_whitespace = False
+    option_spec = {
+            'help': directives.flag
+            }
+
+    def run(self):
+        content = self.arguments[0]
+        if 'help' in self.options:
+            show_help = True
+        else:
+            show_help = False
+
+        model_name, field_name = content.split('/')
+
+        text = get_field_data(model_name, field_name, show_help)
+        if text is None:
+            return [self.state_machine.reporter.warning(
+                    'Model "%s" not found.' % model_name, line=self.lineno)]
+
         return [nodes.Text(text)]
+
+def get_menu_data(module_name, fs_id, show_name_only):
+    ModelData = Model.get('ir.model.data')
+    #db_id = ModelData.get_id(module_name, fs_id)
+
+    records = ModelData.find([
+            ('module', '=', module_name),
+            ('fs_id', '=', fs_id),
+            ('model', '=', 'ir.ui.menu'),
+            ])
+    if not records:
+        return None
+
+    db_id = records[0].db_id
+
+    Menu = Model.get('ir.ui.menu')
+    menu = Menu(db_id)
+    if show_name_only:
+        text = menu.name
+    else:
+        text = menu.complete_name
+
+    text = '*%s*' % text
+    return text
         
 class MenuDirective(Directive):
     has_content = True
@@ -89,27 +123,10 @@ class MenuDirective(Directive):
 
         module_name, fs_id = content.split('.')
 
-        ModelData = Model.get('ir.model.data')
-        #db_id = ModelData.get_id(module_name, fs_id)
-
-        records = ModelData.find([
-                ('module', '=', module_name),
-                ('fs_id', '=', fs_id),
-                ('model', '=', 'ir.ui.menu'),
-                ])
-        if not records:
+        text = get_menu_data(module_name, fs_id, show_name_only)
+        if text is None:
             return [self.state_machine.reporter.warning(
                     'Menu entry "%s" not found.' % content, line=self.lineno)]
-        db_id = records[0].db_id
-
-        Menu = Model.get('ir.ui.menu')
-        menu = Menu(db_id)
-        if show_name_only:
-            text = menu.name
-        else:
-            text = menu.complete_name
-
-        text = '*%s*' % text
 
         return [nodes.Text(text)]
 
@@ -130,15 +147,91 @@ class ViewDirective(Image):
         image_node_list = Image.run(self)
         return image_node_list
 
+class References(Transform):
+    """
+    Parse and transform menu and field references in a document.
+    """
+
+    default_priority = 999
+
+    def apply(self):
+        config = self.document.settings.env.config
+        pattern = config.trydoc_pattern
+        if isinstance(pattern, basestring):
+            pattern = re.compile(pattern)
+        for node in self.document.traverse(nodes.Text):
+            parent = node.parent
+            if isinstance(parent, (nodes.literal, nodes.FixedTextElement)):
+                # ignore inline and block literal text
+                continue
+            text = unicode(node)
+            modified = False
+
+            match = pattern.search(text)
+            while match:
+            #for match in pattern.finditer(text):
+                # catch invalid pattern with too many groups
+                if len(match.groups()) != 1:
+                    raise ValueError(
+                        'trydoc_issue_pattern must have '
+                        'exactly one group: {0!r}'.format(match.groups()))
+                # extract the reference text (including the leading dash)
+                reftext = match.group(0)
+                # extract the reference data (excluding the leading dash)
+                refdata = match.group(1)
+
+                start = match.start(0)
+                end = match.end(0)
+
+                data = refdata.split(':')
+                kind = data[0]
+                content = data[1]
+                if len(data) > 2:
+                    options = data[2]
+                else:
+                    options = None
+
+                if kind == 'field':
+                    model_name, field_name = content.split('/')
+                    if options == 'help':
+                        show_help = True
+                    else:
+                        show_help = False
+                    replacement = get_field_data(model_name, field_name, show_help)
+                elif kind == 'menu':
+                    if options == 'nameonly':
+                        show_name_only = True
+                    else:
+                        show_name_only = False
+                    module_name, fs_id = content.split('.')
+                    replacement = get_menu_data(module_name, fs_id, show_name_only)
+                else:
+                    replacement = refdata
+
+                text = text[:start] + replacement + text[end:]
+                modified = True
+                
+                match = pattern.search(text)
+                
+            if modified:
+                parent.replace(node, [nodes.Text(text)])
+
 
 def init_proteus(app):
     config.set_trytond(database_type='sqlite')
 
+def init_transformer(app):
+    if app.config.trydoc_plaintext:
+        app.add_transform(References)
+
 def setup(app):
     app.add_config_value('trydoc_server', None, 'env')
+    app.add_config_value('trydoc_plaintext', True, 'env')
+    app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
 
     app.add_directive('field', FieldDirective)
     app.add_directive('menu', MenuDirective)
     app.add_directive('view', ViewDirective)
 
-    app.connect('builder-inited', init_proteus)
+    app.connect(b'builder-inited', init_proteus)
+    app.connect(b'builder-inited', init_transformer)
