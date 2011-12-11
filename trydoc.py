@@ -19,8 +19,17 @@ from docutils import nodes
 from docutils.parsers.rst.directives.images import Image
 from docutils.parsers.rst.directives.misc import Replace
 
+import os
 import re
+import path
+import tempfile
 from proteus import config, Model
+
+import tryton
+import gtk
+import gobject
+#from pyvirtualdisplay import Display
+#from pyvirtualdisplay.smartdisplay import SmartDisplay, DisplayTimeoutError
 
 def get_field_data(model_name, field_name, show_help):
         ModelClass = Model.get('ir.model')
@@ -51,7 +60,7 @@ def get_field_data(model_name, field_name, show_help):
                         text = 'Field "%s" has no description available' % content
                 break
 
-        return '*%s*' % text
+        return text
 
 
 class FieldDirective(Directive):
@@ -100,7 +109,6 @@ def get_menu_data(module_name, fs_id, show_name_only):
     else:
         text = menu.complete_name
 
-    text = '*%s*' % text
     return text
         
 class MenuDirective(Directive):
@@ -129,22 +137,72 @@ class MenuDirective(Directive):
 
         return [nodes.Text(text)]
 
+files_to_delete = []
 
 class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
     option_spec.update({
             'field': directives.unchanged,
             })
+    counter = 0
 
     def run(self):
         view = str(self.arguments[0])
         field = self.options.get('field')
 
+        self.counter += 1
         # TODO: Create snapshot
+        fd, self.filename = tempfile.mkstemp(suffix='.png', dir='.')
 
-        self.arguments[0] = 'tryton-test.png'
+        files_to_delete.append(self.filename)
+        self.filename = os.path.basename(self.filename)
+
+        #self.filename = 'screenshot-%03d.png' % self.counter
+        self.screenshot()
+
+        self.arguments[0] = self.filename
         image_node_list = Image.run(self)
         return image_node_list
+
+    def screenshot(self):
+        #disp = Display(visible=True)
+        #disp.start()
+        #disp.redirect_display(True)
+        #print "ENV: ", os.environ
+        #print "AA: ", disp.new_display_var
+        main = tryton.gui.Main(self)
+        gobject.timeout_add(200, self.drawWindow, main.window)
+        gtk.main()
+        #gtk.main_iteration()
+        #import time
+        #time.sleep(1)
+        return True
+
+    #main.sig_login()
+    #gtk.main()
+    #client = tryton.client.TrytonClient()
+    #client.run()
+
+    def drawWindow(self, win):
+        # Code below from: 
+        # http://stackoverflow.com/questions/7518376/creating-a-screenshot-of-a-gtk-window
+        # More info here:
+        # http://burtonini.com/computing/screenshot-tng.py
+
+        width, height = win.get_size()
+        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, width, height)
+
+        # Retrieve the pixel data from the gdk.window attribute (win.window)
+        # of the gtk.window object
+        screenshot = pixbuf.get_from_drawable(win.window, win.get_colormap(), 
+        0, 0, 0, 0, width, height)
+
+        screenshot.save(self.filename, 'png')
+        gtk.main_quit()
+
+        # Return False to stop the repeating interval
+        return False
+
 
 class References(Transform):
     """
@@ -223,6 +281,12 @@ def init_transformer(app):
     if app.config.trydoc_plaintext:
         app.add_transform(References)
 
+def remove_temporary_files(app, exception):
+    for x in files_to_delete:
+        f = path.path(x)
+        if f.exists():
+            f.remove()
+
 def setup(app):
     app.add_config_value('trydoc_server', None, 'env')
     app.add_config_value('trydoc_plaintext', True, 'env')
@@ -234,3 +298,4 @@ def setup(app):
 
     app.connect(b'builder-inited', init_proteus)
     app.connect(b'builder-inited', init_transformer)
+    app.connect(b'build-finished', remove_temporary_files)
