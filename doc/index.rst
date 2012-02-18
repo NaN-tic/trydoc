@@ -70,9 +70,9 @@ The following code shows the full menu entry:
 
    .. menu:: ir.menu_cron_form
      
-which will output **Administration / Scheduler / Scheduled Actions**. 
+which will output *Administration / Scheduler / Scheduled Actions*. 
 Appending the ``:nameonly:`` flag will only show the menu entry name: 
-**Scheduled Actions**.
+*Scheduled Actions*.
 
 Views
 ~~~~~
