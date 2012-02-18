@@ -25,9 +25,10 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 'trydoc']
+extensions = ['trydoc']
 
-todo_include_todos = True
+import proteus
+proteus.config.set_trytond(database_type='sqlite')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -43,7 +44,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TryDoc Test'
-copyright = u'2011, Albert Cervera i Areny'
+copyright = u'2011, NaN Projectes de Programari Lliure, S.L.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

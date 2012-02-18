@@ -11,8 +11,7 @@ from docutils import nodes
 from docutils.transforms import Transform
 
 from sphinx.locale import _
-from sphinx.environment import NoUri
-from sphinx.util.compat import Directive, make_admonition
+from sphinx.util.compat import Directive
 from docutils.parsers.rst import directives, states
 from docutils import nodes
 
@@ -21,9 +20,8 @@ from docutils.parsers.rst.directives.misc import Replace
 
 import os
 import re
-import path
 import tempfile
-from proteus import config, Model
+import proteus
 
 import tryton
 import gtk
@@ -32,35 +30,38 @@ import gobject
 #from pyvirtualdisplay.smartdisplay import SmartDisplay, DisplayTimeoutError
 
 def get_field_data(model_name, field_name, show_help):
-        ModelClass = Model.get('ir.model')
-        models = ModelClass.find([
-                ('model', '=', model_name),
-                ])
-        if not models:
-            return None
+    if not proteus.config._CONFIG.current:
+        raise ValueError('Proteus has not been initialized.')
 
-        ModelField = Model.get('ir.model.field')
-        field = ModelField.find([
-                ('name', '=', field_name),
-                ('model', '=', models[0].id),
-                ])[0]
+    Model = proteus.Model.get('ir.model')
+    models = Model.find([
+            ('model', '=', model_name),
+            ])
+    if not models:
+        return None
 
-        text = ''
-        for field in models[0].fields:
-            if field.name == field_name:
-                if show_help:
-                    if field.help:
-                        text = field.help
-                    else:
-                        text = 'Field "%s" has no help available' % content
+    ModelField = proteus.Model.get('ir.model.field')
+    field = ModelField.find([
+            ('name', '=', field_name),
+            ('model', '=', models[0].id),
+            ])[0]
+
+    text = ''
+    for field in models[0].fields:
+        if field.name == field_name:
+            if show_help:
+                if field.help:
+                    text = field.help
                 else:
-                    if field.field_description:
-                        text = field.field_description
-                    else:
-                        text = 'Field "%s" has no description available' % content
-                break
+                    text = 'Field "%s" has no help available' % content
+            else:
+                if field.field_description:
+                    text = field.field_description
+                else:
+                    text = 'Field "%s" has no description available' % content
+            break
 
-        return text
+    return text
 
 
 class FieldDirective(Directive):
@@ -89,7 +90,9 @@ class FieldDirective(Directive):
         return [nodes.Text(text)]
 
 def get_menu_data(module_name, fs_id, show_name_only):
-    ModelData = Model.get('ir.model.data')
+    if not proteus.config._CONFIG.current:
+        raise ValueError('Proteus has not been initialized.')
+    ModelData = proteus.Model.get('ir.model.data')
     #db_id = ModelData.get_id(module_name, fs_id)
 
     records = ModelData.find([
@@ -102,7 +105,7 @@ def get_menu_data(module_name, fs_id, show_name_only):
 
     db_id = records[0].db_id
 
-    Menu = Model.get('ir.ui.menu')
+    Menu = proteus.Model.get('ir.ui.menu')
     menu = Menu(db_id)
     if show_name_only:
         text = menu.name
@@ -170,6 +173,8 @@ class ViewDirective(Image):
         #disp.redirect_display(True)
         #print "ENV: ", os.environ
         #print "AA: ", disp.new_display_var
+        # TODO:
+        # Use: tryton://localhost/test/model/party.party
         main = tryton.gui.Main(self)
         gobject.timeout_add(200, self.drawWindow, main.window)
         gtk.main()
@@ -274,18 +279,14 @@ class References(Transform):
                 parent.replace(node, [nodes.Text(text)])
 
 
-def init_proteus(app):
-    config.set_trytond(database_type='sqlite')
-
 def init_transformer(app):
     if app.config.trydoc_plaintext:
         app.add_transform(References)
 
 def remove_temporary_files(app, exception):
     for x in files_to_delete:
-        f = path.path(x)
-        if f.exists():
-            f.remove()
+        if os.path.exists(x):
+            os.remove(x)
 
 def setup(app):
     app.add_config_value('trydoc_server', None, 'env')
@@ -296,6 +297,5 @@ def setup(app):
     app.add_directive('menu', MenuDirective)
     app.add_directive('view', ViewDirective)
 
-    app.connect(b'builder-inited', init_proteus)
     app.connect(b'builder-inited', init_transformer)
     app.connect(b'build-finished', remove_temporary_files)
