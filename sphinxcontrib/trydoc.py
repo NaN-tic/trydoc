@@ -3,7 +3,7 @@
     trydoc
     ------
 
-    :copyright: Copyright 2011 by NaN Projectes de Programari Lliure, S.L.
+    :copyright: Copyright 2012 by NaN Projectes de Programari Lliure, S.L.
     :license: BSD, see LICENSE for details.
 """
 
