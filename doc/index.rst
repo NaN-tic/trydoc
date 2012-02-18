@@ -92,6 +92,9 @@ the generated screenshot.
    .. view:: party.party_party_form
       :field: name
 
+.. Note:: This directive is not fully working yet. It will add a screenshot of
+   tryton's client but not of the appropriate view.
+
 Inline usage
 ~~~~~~~~~~~~
 
