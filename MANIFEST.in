@@ -1,0 +1,8 @@
+include COPYRIGHT
+include README
+include LICENSE
+include CHANGELOG
+inlcude trydoc.py
+recursive-include doc *.rst *.py Makefile
+prune doc/_build
+
