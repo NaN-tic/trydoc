@@ -20,7 +20,7 @@ setup(
     long_description=long_desc,
     zip_safe=False,
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -34,5 +34,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=requires,
+    namespace_packages=['sphinxcontrib'],
 )
 
