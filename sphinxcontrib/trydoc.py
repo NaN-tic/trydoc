@@ -53,12 +53,12 @@ def get_field_data(model_name, field_name, show_help):
                 if field.help:
                     text = field.help
                 else:
-                    text = 'Field "%s" has no help available' % content
+                    text = 'Field "%s" has no help available' % field.name
             else:
                 if field.field_description:
                     text = field.field_description
                 else:
-                    text = 'Field "%s" has no description available' % content
+                    text = 'Field "%s" has no description available' % field.name
             break
 
     return text
