@@ -54,26 +54,6 @@ added. See the following example:
    .. fields:: ir.cron/user
       :help:
 
-Menus
-~~~~~
-
-You can refer to any menu entry with the following directive:
-
-::
-
-   .. menu:: reference_to_menu_xml_id
-      :nameonly:
-
-The following code shows the full menu entry:
-
-::
-
-   .. menu:: ir.menu_cron_form
-     
-which will output *Administration / Scheduler / Scheduled Actions*. 
-Appending the ``:nameonly:`` flag will only show the menu entry name: 
-*Scheduled Actions*.
-
 Views
 ~~~~~
 
@@ -94,6 +74,32 @@ the generated screenshot.
 
 .. Note:: This directive is not fully working yet. It will add a screenshot of
    tryton's client but not of the appropriate view.
+
+Menus and other data
+~~~~~~~~~~~~~~~~~~~~
+
+You can refer to any menu entry with the following directive:
+
+::
+
+   .. tryref:: reference_to_menu_xml_id/fieldname
+
+The following code shows the full menu entry:
+
+::
+
+   .. tryref:: ir.menu_cron_form/complete_name
+     
+which will output *Administration / Scheduler / Scheduled Actions*. 
+You can also access any field of the record, for example:
+
+::
+
+   .. tryref:: ir.menu_cron_form/name
+
+will output *Scheduled Actions*. **tryref** can be used to access any field of 
+any record with an *ir.model.data* if you know its XML id.
+
 
 Inline usage
 ~~~~~~~~~~~~

@@ -89,54 +89,43 @@ class FieldDirective(Directive):
 
         return [nodes.Text(text)]
 
-def get_menu_data(module_name, fs_id, show_name_only):
+def get_ref_data(module_name, fs_id, field):
     if not proteus.config._CONFIG.current:
         raise ValueError('Proteus has not been initialized.')
     ModelData = proteus.Model.get('ir.model.data')
-    #db_id = ModelData.get_id(module_name, fs_id)
 
     records = ModelData.find([
             ('module', '=', module_name),
             ('fs_id', '=', fs_id),
-            ('model', '=', 'ir.ui.menu'),
             ])
     if not records:
         return None
 
     db_id = records[0].db_id
+    # model cannot be unicode
+    model = str(records[0].model)
 
-    Menu = proteus.Model.get('ir.ui.menu')
-    menu = Menu(db_id)
-    if show_name_only:
-        text = menu.name
-    else:
-        text = menu.complete_name
+    Model = proteus.Model.get(model)
+    record = Model(db_id)
+    return getattr(record, field)
 
-    return text
-        
-class MenuDirective(Directive):
+class TryRefDirective(Directive):
     has_content = True
     required_arguments = 1
     optional_arguments = 1
     final_argument_whitespace = False
-    option_spec = {
-            # Prints only the name of the menu entry instead of its full path
-            'nameonly': directives.flag, 
-            }
+    option_spec = {}
 
     def run(self):
         content = self.arguments[0]
-        if 'nameonly' in self.options:
-            show_name_only = True
-        else:
-            show_name_only = False
 
-        module_name, fs_id = content.split('.')
+        ref, field = content.split('/')
+        module_name, fs_id = ref.split('.')
 
-        text = get_menu_data(module_name, fs_id, show_name_only)
+        text = get_ref_data(module_name, fs_id, field)
         if text is None:
             return [self.state_machine.reporter.warning(
-                    'Menu entry "%s" not found.' % content, line=self.lineno)]
+                    'Reference "%s" not found.' % content, line=self.lineno)]
 
         return [nodes.Text(text)]
 
@@ -211,7 +200,7 @@ class ViewDirective(Image):
 
 class References(Transform):
     """
-    Parse and transform menu and field references in a document.
+    Parse and transform tryref and field references in a document.
     """
 
     default_priority = 999
@@ -260,13 +249,10 @@ class References(Transform):
                     else:
                         show_help = False
                     replacement = get_field_data(model_name, field_name, show_help)
-                elif kind == 'menu':
-                    if options == 'nameonly':
-                        show_name_only = True
-                    else:
-                        show_name_only = False
-                    module_name, fs_id = content.split('.')
-                    replacement = get_menu_data(module_name, fs_id, show_name_only)
+                elif kind == 'tryref':
+                    ref, field = content.split('/')
+                    module_name, fs_id = ref.split('.')
+                    replacement = get_ref_data(module_name, fs_id, field)
                 else:
                     replacement = refdata
 
@@ -294,8 +280,9 @@ def setup(app):
     app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
 
     app.add_directive('field', FieldDirective)
-    app.add_directive('menu', MenuDirective)
+    app.add_directive('tryref', TryRefDirective)
     app.add_directive('view', ViewDirective)
 
     app.connect(b'builder-inited', init_transformer)
     app.connect(b'build-finished', remove_temporary_files)
+
