@@ -10,7 +10,7 @@ requires = ['Sphinx>=1.0b2']
 
 setup(
     name='trydoc',
-    version='0.1',
+    version='0.2',
     url='http://packages.python.org/trydoc',
     download_url='http://pypi.python.org/pypi/trydoc',
     license='BSD',
