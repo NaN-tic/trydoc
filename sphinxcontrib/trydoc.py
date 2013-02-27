@@ -269,16 +269,16 @@ def init_transformer(app):
         modules_to_install = []
         for module_to_install in app.config.trydoc_modules:
             res = module_model.find([('name', '=', module_to_install)])
-            if app.config.verbose:
-                sys.stderr.write("Module found with name '%s': %s.\n"
-                        % (module_to_install, res))
+            #if app.config.verbose:
+            sys.stderr.write("Module found with name '%s': %s.\n"
+                    % (module_to_install, res))
             if res:
                 modules_to_install.append(res[0].id)
         if modules_to_install:
             proteus_context = proteus.config._CONFIG.current.context
-            if app.config.verbose:
-                sys.stderr.write("It will install the next modules: %s with "
-                        "context %s.\n" % (modules_to_install,
+            #if app.config.verbose:
+            sys.stderr.write("It will install the next modules: %s with "
+                    "context %s.\n" % (modules_to_install,
                                 proteus_context))
             module_model.install(modules_to_install, proteus_context)
         proteus.Wizard('ir.module.module.install_upgrade').execute('upgrade')
@@ -294,7 +294,7 @@ def setup(app):
     app.add_config_value('trydoc_plaintext', True, 'env')
     app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
     app.add_config_value('trydoc_modules', [], 'env')
-    app.add_config_value('verbose', False, 'env'), 
+    #app.add_config_value('verbose', False, 'env'), 
 
     app.add_directive('field', FieldDirective)
     app.add_directive('tryref', TryRefDirective)
