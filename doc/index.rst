@@ -33,9 +33,9 @@ following example will create a new sqlite database automatically::
    import proteus
    proteus.config.set_trytond(database_type='sqlite')
 
-If you use 'sqlite' memory database (like the example) you must to define the
-list of modules to install to could reference their elements (models, fields,
-views, menus...).::
+If you use 'sqlite' memory database (like the example) you must define the
+list of modules to install to be able to reference their elements (models,
+fields, views, menus...).::
 
    trydoc_modules = ['party', 'sale']
 
