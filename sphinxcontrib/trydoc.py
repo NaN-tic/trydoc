@@ -53,7 +53,8 @@ def get_field_data(model_name, field_name, show_help):
                 if field.field_description:
                     text = field.field_description
                 else:
-                    text = 'Field "%s" has no description available' % field.name
+                    text = ('Field "%s" has no description available'
+                        % field.name)
             break
 
     return text
@@ -65,24 +66,29 @@ class FieldDirective(Directive):
     optional_arguments = 1
     final_argument_whitespace = False
     option_spec = {
-            'help': directives.flag
-            }
+        'help': directives.flag,
+        'class': directives.class_option,
+        }
 
     def run(self):
-        content = self.arguments[0]
+        config = self.state.document.settings.env.config
         if 'help' in self.options:
             show_help = True
         else:
             show_help = False
+        classes = [config.trydoc_fieldclass]
+        if 'class' in self.options:
+            classes.extend(self.options['class'])
 
+        content = self.arguments[0]
         model_name, field_name = content.split('/')
-
         text = get_field_data(model_name, field_name, show_help)
         if text is None:
             return [self.state_machine.reporter.warning(
                     'Model "%s" not found.' % model_name, line=self.lineno)]
 
-        return [nodes.Text(text)]
+        return [nodes.inline(text, text, classes=classes)]
+
 
 def get_ref_data(module_name, fs_id, field):
     if not proteus.config._CONFIG.current:
@@ -104,16 +110,23 @@ def get_ref_data(module_name, fs_id, field):
     record = Model(db_id)
     return getattr(record, field)
 
+
 class TryRefDirective(Directive):
     has_content = True
     required_arguments = 1
     optional_arguments = 1
     final_argument_whitespace = False
-    option_spec = {}
+    option_spec = {
+        'class': directives.class_option,
+        }
 
     def run(self):
-        content = self.arguments[0]
+        config = self.state.document.settings.env.config
+        classes = [config.trydoc_refclass]
+        if 'class' in self.options:
+            classes.extend(self.options['class'])
 
+        content = self.arguments[0]
         ref, field = content.split('/')
         module_name, fs_id = ref.split('.')
 
@@ -122,18 +135,26 @@ class TryRefDirective(Directive):
             return [self.state_machine.reporter.warning(
                     'Reference "%s" not found.' % content, line=self.lineno)]
 
-        return [nodes.Text(text)]
+        return [nodes.inline(text, text, classes=classes)]
 
 files_to_delete = []
+
 
 class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
     option_spec.update({
-            'field': directives.unchanged,
-            })
+        'field': directives.unchanged,
+        'class': directives.class_option,
+        })
     counter = 0
 
     def run(self):
+        config = self.state.document.settings.env.config
+        if 'class' in self.options:
+            self.options['class'].insert(0, config.trydoc_viewclass)
+        else:
+            self.options['class'] = [config.trydoc_viewclass]
+
         view = str(self.arguments[0])
         field = self.options.get('field')
 
@@ -173,18 +194,19 @@ class ViewDirective(Image):
     #client.run()
 
     def drawWindow(self, win):
-        # Code below from: 
+        # Code below from:
         # http://stackoverflow.com/questions/7518376/creating-a-screenshot-of-a-gtk-window
         # More info here:
         # http://burtonini.com/computing/screenshot-tng.py
 
         width, height = win.get_size()
-        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, width, height)
+        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, width,
+            height)
 
         # Retrieve the pixel data from the gdk.window attribute (win.window)
         # of the gtk.window object
-        screenshot = pixbuf.get_from_drawable(win.window, win.get_colormap(), 
-        0, 0, 0, 0, width, height)
+        screenshot = pixbuf.get_from_drawable(win.window, win.get_colormap(),
+            0, 0, 0, 0, width, height)
 
         screenshot.save(self.filename, 'png')
         gtk.main_quit()
@@ -215,17 +237,12 @@ class References(Transform):
 
             match = pattern.search(text)
             while match:
-            #for match in pattern.finditer(text):
-                # catch invalid pattern with too many groups
                 if len(match.groups()) != 1:
                     raise ValueError(
                         'trydoc_issue_pattern must have '
                         'exactly one group: {0!r}'.format(match.groups()))
-                # extract the reference text (including the leading dash)
-                reftext = match.group(0)
                 # extract the reference data (excluding the leading dash)
                 refdata = match.group(1)
-
                 start = match.start(0)
                 end = match.end(0)
 
@@ -243,7 +260,8 @@ class References(Transform):
                         show_help = True
                     else:
                         show_help = False
-                    replacement = get_field_data(model_name, field_name, show_help)
+                    replacement = get_field_data(model_name, field_name,
+                        show_help)
                 elif kind == 'tryref':
                     ref, field = content.split('/')
                     module_name, fs_id = ref.split('.')
@@ -253,9 +271,9 @@ class References(Transform):
 
                 text = text[:start] + replacement + text[end:]
                 modified = True
-                
+
                 match = pattern.search(text)
-                
+
             if modified:
                 parent.replace(node, [nodes.Text(text)])
 
@@ -289,12 +307,16 @@ def remove_temporary_files(app, exception):
         if os.path.exists(x):
             os.remove(x)
 
+
 def setup(app):
     app.add_config_value('trydoc_server', None, 'env')
     app.add_config_value('trydoc_plaintext', True, 'env')
     app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
+    app.add_config_value('trydoc_fieldclass', 'trydocfield', 'env')
+    app.add_config_value('trydoc_refclass', 'trydocref', 'env')
+    app.add_config_value('trydoc_viewclass', 'trydocview', 'env')
     app.add_config_value('trydoc_modules', [], 'env')
-    #app.add_config_value('verbose', False, 'env'), 
+    #app.add_config_value('verbose', False, 'env'),
 
     app.add_directive('field', FieldDirective)
     app.add_directive('tryref', TryRefDirective)
@@ -302,4 +324,3 @@ def setup(app):
 
     app.connect(b'builder-inited', init_transformer)
     app.connect(b'build-finished', remove_temporary_files)
-

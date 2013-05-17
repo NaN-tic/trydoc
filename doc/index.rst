@@ -11,7 +11,7 @@ Installation
 
 This extension requires the following packages:
 
-- Sphinx 1.0 
+- Sphinx 1.0
 - proteus
 - tryton
 
@@ -39,6 +39,12 @@ fields, views, menus...).::
 
    trydoc_modules = ['party', 'sale']
 
+You can use a persistent PostgreSQL database (the customer's database
+tipically). The configuration will be something like this:::
+
+    proteus_config = proteus.config.set_trytond(database_name='trydoc',
+            database_type='postgresql', language='es_ES', password='admin',
+            config_file='~/trytond/etc/trytond.conf')
 
 Usage
 -----
@@ -54,13 +60,29 @@ You can refer to any field with the following directive:
 
    .. fields:: model/field
 
-which will print the given field name. Optionally the ``:help:`` option can be 
-added. See the following example:
+which will print the given field name inside an _span_ with the class
+*trydocfield*. You can change this default class with the configuration option
+*trydoc_fieldclass*.
+
+Optionally the ``:help:`` flag can be added. See the following example:
 
 ::
 
    .. fields:: ir.cron/user
       :help:
+
+It will print the help text of field despite of the field name (if the field
+doesn't have help text it will print a message advertising it.
+
+It also have another optional option ``:class: CLASSLIST``. It adds the
+specified classes to the _span_ (not replace the default class). An example:::
+
+   .. fields:: ir.cron/user
+      :class: admin
+
+It will generate the following code:::
+
+    <span class="trydocfield admin">Usuario</span>
 
 Views
 ~~~~~
@@ -83,6 +105,10 @@ the generated screenshot.
 .. Note:: This directive is not fully working yet. It will add a screenshot of
    tryton's client but not of the appropriate view.
 
+It also has the optional option ``:class: CLASSLIST`` which adds the specified
+class to the default class *trydocview* (which can be changed with the
+configuration option *trydoc_viewclass*).
+
 Menus and other data
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -97,8 +123,8 @@ The following code shows the full menu entry:
 ::
 
    .. tryref:: ir.menu_cron_form/complete_name
-     
-which will output *Administration / Scheduler / Scheduled Actions*. 
+
+which will output *Administration / Scheduler / Scheduled Actions*.
 You can also access any field of the record, for example:
 
 ::
@@ -108,11 +134,16 @@ You can also access any field of the record, for example:
 will output *Scheduled Actions*. **tryref** can be used to access any field of 
 any record with an *ir.model.data* if you know its XML id.
 
+Like field directive, it will output the text inside an _span_ tag with the
+class *trydocref*. This default class could be changed with the configuration
+option *trydoc_refclass*. And if you want to add another classes to an specific
+entry you could use the ``:class: CLASSLIST`` option.
 
 Inline usage
 ~~~~~~~~~~~~
 
-Inline usage is also available either using Sphinx's mechanism:
+Inline usage is also available either using Sphinx's replace mechanism. As it
+uses the directive it has all options and the same behaviour than directives:
 
 ::
 
@@ -120,7 +151,8 @@ Inline usage is also available either using Sphinx's mechanism:
 
    .. |cron_user| field:: ir.cron/user
 
-or one provided by trydoc, which is shorter:
+or one provided by trydoc, which is shorter (but it doesn't put the text inside
+and _span_ tag and it doesn't support any option):
 
 ::
 
