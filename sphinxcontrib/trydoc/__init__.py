@@ -19,7 +19,7 @@ import sys
 import tempfile
 import proteus
 
-import tryton
+#import tryton
 import gtk
 import gobject
 

@@ -5,6 +5,7 @@ include CHANGELOG
 recursive-include sphinxcontrib
 recursive-include doc *.rst *.py Makefile
 recursive-include tests *.py
+recursive-include sphinxcontrib *.template
 prune doc/_build
 prune test/_build
 
