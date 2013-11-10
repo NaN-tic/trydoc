@@ -1,7 +1,7 @@
 trydoc
 ======
 
-http://packages.python.org/sphinxcontrib-trydoc
+http://packages.python.org/trydoc
 
 A Sphinx_ extension providing Tryton-specific markup.
 
