@@ -10,7 +10,6 @@ requires = [
     'path.py',
     'proteus',
     'Sphinx>=1.0b2',
-    'sphinxcontrib-inheritance>=0.5',
     ]
 
 setup(
