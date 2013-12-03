@@ -33,6 +33,8 @@ def parse_arguments(arguments):
         help='Config File to update modules (default: ./modules.cfg)')
     parser.add_argument('--trytond-dir', '-t', dest='trytond',
         help='Path to the trytond directory if it is not installed as a module')
+    parser.add_argument('--xmlrpc', '-x', dest='xmlrpc', default=None,
+        help='XML-RPC Server')
 
     settings = parser.parse_args()
     return settings
@@ -46,8 +48,11 @@ def main(argv=sys.argv):
         if os.path.isdir(directory):
             sys.path.insert(0, directory)
 
-    pconfig.set_trytond(options.database, database_type='postgresql',
-        password='admin')
+    if not options.xmlrpc:
+        pconfig.set_trytond(options.database, database_type='postgresql',
+            password='admin')
+    else:
+        pconfig.set_xmlrpc('http://%s/%s' % (options.xmlrpc, options.database))
 
     Module = Model.get('ir.module.module')
     modules = Module.find([('state', '=', 'installed')])
