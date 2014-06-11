@@ -19,9 +19,15 @@ import sys
 import tempfile
 import proteus
 
-#import tryton
-import gtk
-import gobject
+import tryton
+try:
+    import gtk
+    import gobject
+except ImportError, e:
+    print >> sys.stderr, ("gtk importation error (%s). Screenshots feature "
+        "will not be available.") % e
+    gtk = None
+    gobject = None
 
 
 def get_field_data(model_name, field_name, show_help):
@@ -162,7 +168,7 @@ class ViewDirective(Image):
         # TODO: Create snapshot
         fd, self.filename = tempfile.mkstemp(suffix='.png', dir='.')
 
-        files_to_delete.append(self.filename)
+        #files_to_delete.append(self.filename)
         self.filename = os.path.basename(self.filename)
 
         #self.filename = 'screenshot-%03d.png' % self.counter
@@ -173,6 +179,8 @@ class ViewDirective(Image):
         return image_node_list
 
     def screenshot(self):
+        assert gtk is not None, "gtk not imported"
+        assert gobject is not None, "gobject not imported"
         #disp = Display(visible=True)
         #disp.start()
         #disp.redirect_display(True)
@@ -181,19 +189,22 @@ class ViewDirective(Image):
         # TODO:
         # Use: tryton://localhost/test/model/party.party
         main = tryton.gui.Main(self)
-        gobject.timeout_add(200, self.drawWindow, main.window)
+        gobject.timeout_add(400, self.drawWindow, main.window)
         gtk.main()
         #gtk.main_iteration()
         #import time
         #time.sleep(1)
         return True
 
+    assert gtk is not None, "gtk not imported"
     #main.sig_login()
     #gtk.main()
     #client = tryton.client.TrytonClient()
     #client.run()
 
     def drawWindow(self, win):
+        assert gtk is not None, "gtk not imported"
+
         # Code below from:
         # http://stackoverflow.com/questions/7518376/creating-a-screenshot-of-a-gtk-window
         # More info here:
