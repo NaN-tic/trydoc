@@ -113,6 +113,7 @@ inheritance_modules += [ x for x,y in config.items('modules') if y=='True']
 if 'sphinxcontrib.trydoc' in extensions:
     import proteus
     %(trytond_into_path)s
+    trytond_admin_password = '%(trytond_admin_password)s'
     proteus.config.set_trytond(%(set_trytond_params)s)
 
 
