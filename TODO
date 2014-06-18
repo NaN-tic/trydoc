@@ -1,0 +1,16 @@
+* View directive (screenshots): Missing features
+  * Add suport to "field" attribute (probably requires changes in Tryton
+    client)
+  * Add suport to empty forms in URL system (change in Tryton)
+  * Add a way to define which record use:
+    * with XML ID => easy to implement, but pretty less useful because normally
+      there isn't records added from XML
+    * spceifying an ID => easy to implement, but not generic
+    * specifying a domain
+  * Add a way to define a context/domain to be passed to view to force the
+    value of some field (to force some "states" condition)
+  * Only get the content of the tab (the form or the tree), whithout menu nor
+    window menus and decorations
+    * Add an attribute to force to get all the window
+  * Allow to define the user (and password) to use for the screenshot
+

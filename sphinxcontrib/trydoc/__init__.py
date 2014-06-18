@@ -3,9 +3,15 @@
     trydoc
     ------
 
-    :copyright: Copyright 2012 by NaN Projectes de Programari Lliure, S.L.
+    :copyright: Copyright 2012-14 by NaN Projectes de Programari Lliure, S.L.
     :license: BSD, see LICENSE for details.
 """
+from path import path
+import ConfigParser
+import os
+import re
+import sys
+import tempfile
 
 from docutils import nodes
 from docutils.parsers.rst import directives
@@ -13,12 +19,7 @@ from docutils.parsers.rst.directives.images import Image
 from docutils.transforms import Transform
 from sphinx.util.compat import Directive
 
-import os
-import re
-import sys
-import tempfile
 import proteus
-
 import tryton
 try:
     import gtk
@@ -28,6 +29,9 @@ except ImportError, e:
         "will not be available.") % e
     gtk = None
     gobject = None
+
+
+screenshot_files = []
 
 
 def get_field_data(model_name, field_name, show_help):
@@ -66,6 +70,29 @@ def get_field_data(model_name, field_name, show_help):
     return text
 
 
+def get_ref_data(module_name, fs_id, field=None):
+    if not proteus.config._CONFIG.current:
+        raise ValueError('Proteus has not been initialized.')
+    ModelData = proteus.Model.get('ir.model.data')
+
+    records = ModelData.find([
+            ('module', '=', module_name),
+            ('fs_id', '=', fs_id),
+            ])
+    if not records:
+        return None
+
+    db_id = records[0].db_id
+    # model cannot be unicode
+    model = str(records[0].model)
+
+    Model = proteus.Model.get(model)
+    record = Model(db_id)
+    if field:
+        return getattr(record, field)
+    return record
+
+
 class FieldDirective(Directive):
     has_content = True
     required_arguments = 1
@@ -96,27 +123,6 @@ class FieldDirective(Directive):
         return [nodes.inline(text, text, classes=classes)]
 
 
-def get_ref_data(module_name, fs_id, field):
-    if not proteus.config._CONFIG.current:
-        raise ValueError('Proteus has not been initialized.')
-    ModelData = proteus.Model.get('ir.model.data')
-
-    records = ModelData.find([
-            ('module', '=', module_name),
-            ('fs_id', '=', fs_id),
-            ])
-    if not records:
-        return None
-
-    db_id = records[0].db_id
-    # model cannot be unicode
-    model = str(records[0].model)
-
-    Model = proteus.Model.get(model)
-    record = Model(db_id)
-    return getattr(record, field)
-
-
 class TryRefDirective(Directive):
     has_content = True
     required_arguments = 1
@@ -143,8 +149,6 @@ class TryRefDirective(Directive):
 
         return [nodes.inline(text, text, classes=classes)]
 
-files_to_delete = []
-
 
 class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
@@ -152,59 +156,111 @@ class ViewDirective(Image):
         'field': directives.unchanged,
         'class': directives.class_option,
         })
-    counter = 0
+    tryton_main = None
+    filename = None
 
     def run(self):
+        assert gtk is not None, "gtk not imported"
+        assert gobject is not None, "gobject not imported"
+
         config = self.state.document.settings.env.config
         if 'class' in self.options:
             self.options['class'].insert(0, config.trydoc_viewclass)
         else:
             self.options['class'] = [config.trydoc_viewclass]
 
-        view = str(self.arguments[0])
-        field = self.options.get('field')
+        view_xml_id = str(self.arguments[0])
+        field_name = self.options.get('field')
 
-        self.counter += 1
-        # TODO: Create snapshot
-        fd, self.filename = tempfile.mkstemp(suffix='.png', dir='.')
+        tryton_main = ViewDirective.get_tryton_main()
 
-        #files_to_delete.append(self.filename)
-        self.filename = os.path.basename(self.filename)
+        url = self.calc_url(view_xml_id, field_name)
 
-        #self.filename = 'screenshot-%03d.png' % self.counter
-        self.screenshot()
+        source_document_path = path(self.state.document.current_source)
+        prefix = 'screenshot-' + source_document_path.basename().split('.')[0]
+        _, self.filename = tempfile.mkstemp(prefix=prefix,
+            suffix='.png', dir=source_document_path.parent)
 
-        self.arguments[0] = self.filename
+        self.screenshot(tryton_main, url)
+        screenshot_files.append(self.filename)
+
+        # if app.config.verbose:
+        sys.stderr.write("Screenshot %s in tempfile %s"
+            % (url, self.filename))
+        self.arguments[0] = path(self.filename).basename()
         image_node_list = Image.run(self)
         return image_node_list
 
-    def screenshot(self):
-        assert gtk is not None, "gtk not imported"
-        assert gobject is not None, "gobject not imported"
-        #disp = Display(visible=True)
-        #disp.start()
-        #disp.redirect_display(True)
-        #print "ENV: ", os.environ
-        #print "AA: ", disp.new_display_var
-        # TODO:
-        # Use: tryton://localhost/test/model/party.party
-        main = tryton.gui.Main(self)
-        gobject.timeout_add(400, self.drawWindow, main.window)
-        gtk.main()
-        #gtk.main_iteration()
-        #import time
-        #time.sleep(1)
+    @classmethod
+    def get_tryton_main(cls):
+        if cls.tryton_main is not None:
+            return cls.tryton_main
+
+        tryton_main = tryton.gui.Main(cls)
+
+        cls.tryton_main = tryton_main
+        return tryton_main
+
+    @classmethod
+    def sig_login(cls, tryton_main):
+        # tryton.rpc.context_reload()
+        prefs = tryton.common.RPCExecute('model', 'res.user',
+            'get_preferences', False)
+        tryton.common.ICONFACTORY.load_icons()
+        tryton.common.MODELACCESS.load_models()
+        tryton.common.VIEW_SEARCH.load_searches()
+        if prefs and 'language_direction' in prefs:
+            tryton.translate.set_language_direction(
+                prefs['language_direction'])
+        tryton_main.sig_win_menu(prefs=prefs)
+        tryton_main.set_title(prefs.get('status_bar', ''))
+        if prefs and 'language' in prefs:
+            tryton.translate.setlang(prefs['language'], prefs.get('locale'))
+            tryton_main.set_menubar()
+            tryton_main.favorite_unset()
+        tryton_main.favorite_unset()
+        tryton_main.menuitem_favorite.set_sensitive(True)
+        tryton_main.menuitem_user.set_sensitive(True)
         return True
 
-    assert gtk is not None, "gtk not imported"
-    #main.sig_login()
-    #gtk.main()
-    #client = tryton.client.TrytonClient()
-    #client.run()
+    def calc_url(self, view_xml_id, field_name=None):
+        module_name, fs_id = view_xml_id.split('.')
+        view = get_ref_data(module_name, fs_id)
+
+        # TODO: Hack to get some ID of view model
+        Model = proteus.Model.get(view.model)
+        record, = Model.find([], limit=1)
+
+        return 'tryton://localhost:8000/%s/model/%s/%d' % (
+            proteus.config._CONFIG.current.database_name, view.model,
+            record.id)
+
+    def screenshot(self, tryton_main, url):
+        config = self.state.document.settings.env.config
+        proteus_instance = proteus.config._CONFIG.current
+
+        trytond_config = ConfigParser.ConfigParser()
+        with open(proteus_instance.config_file, 'r') as f:
+            trytond_config.readfp(f)
+        trytond_port = (trytond_config.get('options', 'jsonrpc').split(':')[1]
+            if (trytond_config.get('options', 'jsonrpc', False) and
+                len(trytond_config.get('options', 'jsonrpc').split(':')) == 2)
+            else 8000)
+
+        # Now, it only works with local instances because it mixes RPC calls
+        # and trytond module importation
+        tryton.rpc.login('admin', config.trytond_admin_password, 'localhost',
+            int(trytond_port), proteus_instance.database_name)
+        # TODO: put some wait because sometimes the login window is raised
+        ViewDirective.sig_login(tryton_main)
+
+        # Use: tryton://localhost/test/model/party.party
+        tryton_main.open_url(url)
+        gobject.timeout_add(6000, self.drawWindow, tryton_main.window)
+        gtk.main()
+        return True
 
     def drawWindow(self, win):
-        assert gtk is not None, "gtk not imported"
-
         # Code below from:
         # http://stackoverflow.com/questions/7518376/creating-a-screenshot-of-a-gtk-window
         # More info here:
@@ -220,8 +276,8 @@ class ViewDirective(Image):
             0, 0, 0, 0, width, height)
 
         screenshot.save(self.filename, 'png')
+        tryton.rpc.logout()
         gtk.main_quit()
-
         # Return False to stop the repeating interval
         return False
 
@@ -298,14 +354,14 @@ def init_transformer(app):
         modules_to_install = []
         for module_to_install in app.config.trydoc_modules:
             res = module_model.find([('name', '=', module_to_install)])
-            #if app.config.verbose:
+            # if app.config.verbose:
             sys.stderr.write("Module found with name '%s': %s.\n"
                     % (module_to_install, res))
             if res:
                 modules_to_install.append(res[0].id)
         if modules_to_install:
             proteus_context = proteus.config._CONFIG.current.context
-            #if app.config.verbose:
+            # if app.config.verbose:
             sys.stderr.write("It will install the next modules: %s with "
                     "context %s.\n" % (modules_to_install,
                                 proteus_context))
@@ -314,20 +370,20 @@ def init_transformer(app):
 
 
 def remove_temporary_files(app, exception):
-    for x in files_to_delete:
-        if os.path.exists(x):
-            os.remove(x)
+    for filename in screenshot_files:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 def setup(app):
-    app.add_config_value('trydoc_server', None, 'env')
     app.add_config_value('trydoc_plaintext', True, 'env')
     app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
     app.add_config_value('trydoc_fieldclass', 'trydocfield', 'env')
     app.add_config_value('trydoc_refclass', 'trydocref', 'env')
     app.add_config_value('trydoc_viewclass', 'trydocview', 'env')
     app.add_config_value('trydoc_modules', [], 'env')
-    #app.add_config_value('verbose', False, 'env'),
+    app.add_config_value('trytond_admin_password', 'admin', 'env')
+    # app.add_config_value('verbose', False, 'env'),
 
     app.add_directive('field', FieldDirective)
     app.add_directive('tryref', TryRefDirective)
