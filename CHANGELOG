@@ -1,3 +1,4 @@
+Version 0.5 2014-06-18
 * Add option parser to get modules from XML-RPC server
 * Removed sphinxcontrib-inheritance from requirements
 * First functional version of view directive (screenshot) without support for
