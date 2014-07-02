@@ -46,10 +46,14 @@ def get_field_data(model_name, field_name, show_help):
         return None
 
     ModelField = proteus.Model.get('ir.model.field')
-    field = ModelField.find([
+    fields = ModelField.find([
             ('name', '=', field_name),
             ('model', '=', models[0].id),
-            ])[0]
+            ], limit=1)
+    if not fields:
+        raise AttributeError('Model "%s" has no field named "%s"'
+            % (model_name, field_name))
+    field, = fields
 
     text = ''
     for field in models[0].fields:
