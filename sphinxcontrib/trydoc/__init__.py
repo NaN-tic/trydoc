@@ -246,13 +246,17 @@ class ViewDirective(Image):
         config = self.state.document.settings.env.config
         proteus_instance = proteus.config._CONFIG.current
 
-        trytond_config = ConfigParser.ConfigParser()
-        with open(proteus_instance.config_file, 'r') as f:
-            trytond_config.readfp(f)
-        trytond_port = (trytond_config.get('options', 'jsonrpc').split(':')[1]
-            if (trytond_config.get('options', 'jsonrpc', False) and
-                len(trytond_config.get('options', 'jsonrpc').split(':')) == 2)
-            else 8000)
+        trytond_port = 8000
+        if proteus_instance.config_file:
+            trytond_config = ConfigParser.ConfigParser()
+            with open(proteus_instance.config_file, 'r') as f:
+                trytond_config.readfp(f)
+            trytond_port = (
+                trytond_config.get('options', 'jsonrpc').split(':')[1]
+                if (trytond_config.get('options', 'jsonrpc', False) and
+                    len(trytond_config.get('options', 'jsonrpc').split(':'))
+                    == 2)
+                else 8000)
 
         # Now, it only works with local instances because it mixes RPC calls
         # and trytond module importation
