@@ -175,6 +175,8 @@ class ViewDirective(Image):
         tryton_main = ViewDirective.get_tryton_main()
 
         url = self.calc_url(view_xml_id, field_name)
+        if not url:
+            return []
 
         source_document_path = path(self.state.document.current_source)
         prefix = 'screenshot-' + source_document_path.basename().split('.')[0]
@@ -229,11 +231,16 @@ class ViewDirective(Image):
 
         # TODO: Hack to get some ID of view model
         Model = proteus.Model.get(view.model)
-        record, = Model.find([], limit=1)
+        records = Model.find([], limit=1)
+        if not records:
+            sys.stderr.write("There isn't any record of %s so the screenshot "
+                "for view %s (field: %s) can't be done."
+                % (view.model, view_xml_id, field_name))
+            return None
 
         return 'tryton://localhost:8000/%s/model/%s/%d' % (
             proteus.config._CONFIG.current.database_name, view.model,
-            record.id)
+            records[0].id)
 
     def screenshot(self, tryton_main, url):
         config = self.state.document.settings.env.config
