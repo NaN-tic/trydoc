@@ -93,7 +93,6 @@ pygments_style = 'sphinx'
 
 # -- Configuration of inheritance ---------------------------------------------
 
-inheritance_autoreferences = False
 inheritance_debug = %(inheritance_debug)s
 verbose = %(verbose)s
 
