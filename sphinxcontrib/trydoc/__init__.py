@@ -230,7 +230,7 @@ class ViewDirective(Image):
 
         tryton_main = self.get_tryton_main()
 
-        url = self.calc_url(view_xml_id, field_name)
+        url = self.calc_url(view_xml_id)
         if not url:
             return []
 
@@ -239,7 +239,7 @@ class ViewDirective(Image):
         _, self.filename = tempfile.mkstemp(prefix=prefix,
             suffix='.png', dir=source_document_path.parent)
 
-        self.screenshot(tryton_main, url)
+        self.screenshot(tryton_main, url, field_name)
         screenshot_files.append(self.filename)
 
         # if app.config.verbose:
@@ -350,19 +350,39 @@ class ViewDirective(Image):
         except:
             pass
 
-    def calc_url(self, view_xml_id, field_name=None):
+    def calc_url(self, view_xml_id):
         module_name, fs_id = view_xml_id.split('.')
         view = get_ref_data(module_name, fs_id)
         return 'tryton://%s:%s/%s/model/%s;views=[%s]' % (self.trytond_host,
             self.trytond_port, self.trytond_dbname, view.model, view.id)
 
-    def screenshot(self, tryton_main, url):
+    def screenshot(self, tryton_main, url, field_name):
         tryton_main.open_url(url)
-        gobject.timeout_add(6000, self.drawWindow, tryton_main.window)
+
+        if field_name:
+            gobject.timeout_add(2000, self.set_cursor, tryton_main, field_name)
+
+        gobject.timeout_add(6000, self.draw_window, tryton_main.window)
         gtk.main()
         return True
 
-    def drawWindow(self, win):
+    def set_cursor(self, tryton_main, field_name):
+        tryton_main.current_page = tryton_main.notebook.get_current_page()
+        current_form = tryton_main.get_page(tryton_main.current_page)
+        current_view = (current_form.screen.current_view
+            if current_form and current_form.screen else None)
+        if current_view and current_view.view_type in ('tree', 'form'):
+            current_view.cursor_widget = field_name
+
+            def _set_cursor():
+                if (tryton_main.current_page
+                        == tryton_main.notebook.get_current_page()):
+                    current_view.set_cursor(reset_view=True)
+            # Using idle_add because the gtk.TreeView grabs the focus at the
+            # end of the event
+            gobject.idle_add(_set_cursor)
+
+    def draw_window(self, win):
         # Code below from:
         # http://stackoverflow.com/questions/7518376/creating-a-screenshot-of-a-gtk-window
         # More info here:

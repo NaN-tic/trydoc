@@ -3,6 +3,7 @@
 * Get Tryton server connection params from configuration and also screenshots
   size
 * Add **model** directive to print model name
+* Implemented *field* attribute for **view** directive
 
 Version 0.5 2014-06-18
 * Add option parser to get modules from XML-RPC server

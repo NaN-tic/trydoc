@@ -192,9 +192,6 @@ the generated screenshot.
    .. view:: party.party_party_form
       :field: name
 
-.. Note:: This directive is not fully working yet. It will add a screenshot of
-   tryton's client but not of the appropriate view.
-
 It also has the optional option ``:class: CLASSLIST`` which adds the specified
 class to the default class *trydocview* (which can be changed with the
 configuration option *trydoc_viewclass*).
