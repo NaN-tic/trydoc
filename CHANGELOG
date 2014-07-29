@@ -1,3 +1,9 @@
+* Fix screenshot bug: allow to generate more than 3 screenshots
+* Fix screenshot bug: show icons correctly
+* Get Tryton server connection params from configuration and also screenshots
+  size
+* Add **model** directive to print model name
+
 Version 0.5 2014-06-18
 * Add option parser to get modules from XML-RPC server
 * Removed sphinxcontrib-inheritance from requirements

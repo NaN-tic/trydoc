@@ -86,14 +86,45 @@ Usage
 
 TryDoc adds the following set of directives to be used in the docs:
 
-Fields
-~~~~~~
+Model
+~~~~~
+
+You can refer to any model with the following directive:
+
+::
+
+   .. model:: model.name
+
+which will print the given model name inside an _span_ with the class
+*trydocfield*. You can change this default class with the configuration option
+*trydoc_fieldclass*.
+
+Optionally the ``:info:`` flag can be added to get the Info field of ir.model.
+It isn't translated so provably it isn't very useful:
+
+::
+
+   .. model:: account.tax
+      :info:
+
+It also have another optional option ``:class: CLASSLIST``. It adds the
+specified classes to the _span_ (not replace the default class). An example:::
+
+   .. model:: ir.cron
+      :class: admin
+
+It will generate the following code:::
+
+    <span class="trydocmodel admin">Cron</span>
+
+Field
+~~~~~
 
 You can refer to any field with the following directive:
 
 ::
 
-   .. fields:: model/field
+   .. field:: model/field
 
 which will print the given field name inside an _span_ with the class
 *trydocfield*. You can change this default class with the configuration option
@@ -103,49 +134,18 @@ Optionally the ``:help:`` flag can be added. See the following example:
 
 ::
 
-   .. fields:: ir.cron/user
+   .. field:: ir.cron/user
       :help:
 
 It will print the help text of field despite of the field name (if the field
 doesn't have help text it will print a message advertising it.
 
-It also have another optional option ``:class: CLASSLIST``. It adds the
-specified classes to the _span_ (not replace the default class). An example:::
+It also have the optional option ``:class: CLASSLIST``.
 
-   .. fields:: ir.cron/user
-      :class: admin
+Tryref
+~~~~~~
 
-It will generate the following code:::
-
-    <span class="trydocfield admin">Usuario</span>
-
-Views
-~~~~~
-
-You can add a screenshot of any model view with the following directive:
-
-::
-
-   .. view:: reference_to_view_xml_id
-      :field: fieldname
-
-where ``:field:`` is optional and will ensure the given field name is shown in 
-the generated screenshot.
-
-::
-
-   .. view:: party.party_party_form
-      :field: name
-
-.. Note:: This directive is not fully working yet. It will add a screenshot of
-   tryton's client but not of the appropriate view.
-
-It also has the optional option ``:class: CLASSLIST`` which adds the specified
-class to the default class *trydocview* (which can be changed with the
-configuration option *trydoc_viewclass*).
-
-Menus and other data
-~~~~~~~~~~~~~~~~~~~~
+To show any data introduced in a XML file you can use the **tryref** directive.
 
 You can refer to any menu entry with the following directive:
 
@@ -173,6 +173,31 @@ Like field directive, it will output the text inside an _span_ tag with the
 class *trydocref*. This default class could be changed with the configuration
 option *trydoc_refclass*. And if you want to add another classes to an specific
 entry you could use the ``:class: CLASSLIST`` option.
+
+View
+~~~~
+
+You can add a screenshot of any model view with the following directive:
+
+::
+
+   .. view:: reference_to_view_xml_id
+      :field: fieldname
+
+where ``:field:`` is optional and will ensure the given field name is shown in 
+the generated screenshot.
+
+::
+
+   .. view:: party.party_party_form
+      :field: name
+
+.. Note:: This directive is not fully working yet. It will add a screenshot of
+   tryton's client but not of the appropriate view.
+
+It also has the optional option ``:class: CLASSLIST`` which adds the specified
+class to the default class *trydocview* (which can be changed with the
+configuration option *trydoc_viewclass*).
 
 Inline usage
 ~~~~~~~~~~~~

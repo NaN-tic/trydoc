@@ -36,6 +36,21 @@ except ImportError, e:
 screenshot_files = []
 
 
+def get_model_data(model_name, show_info):
+    if not proteus.config._CONFIG.current:
+        raise ValueError('Proteus has not been initialized.')
+
+    Model = proteus.Model.get('ir.model')
+    models = Model.find([
+            ('model', '=', model_name),
+            ])
+    if not models:
+        return None
+
+    text = models[0].name if not show_info else models[0].info
+    return text
+
+
 def get_field_data(model_name, field_name, show_help):
     if not proteus.config._CONFIG.current:
         raise ValueError('Proteus has not been initialized.')
@@ -58,21 +73,17 @@ def get_field_data(model_name, field_name, show_help):
     field, = fields
 
     text = ''
-    for field in models[0].fields:
-        if field.name == field_name:
-            if show_help:
-                if field.help:
-                    text = field.help
-                else:
-                    text = 'Field "%s" has no help available' % field.name
-            else:
-                if field.field_description:
-                    text = field.field_description
-                else:
-                    text = ('Field "%s" has no description available'
-                        % field.name)
-            break
-
+    if show_help:
+        if field.help:
+            text = field.help
+        else:
+            text = 'Field "%s" has no help available' % field.name
+    else:
+        if field.field_description:
+            text = field.field_description
+        else:
+            text = ('Field "%s" has no description available'
+                % field.name)
     return text
 
 
@@ -97,6 +108,35 @@ def get_ref_data(module_name, fs_id, field=None):
     if field:
         return getattr(record, field)
     return record
+
+
+class ModelDirective(Directive):
+    has_content = True
+    required_arguments = 1
+    optional_arguments = 1
+    final_argument_whitespace = False
+    option_spec = {
+        'info': directives.flag,
+        'class': directives.class_option,
+        }
+
+    def run(self):
+        config = self.state.document.settings.env.config
+        if 'info' in self.options:
+            show_info = True
+        else:
+            show_info = False
+        classes = [config.trydoc_modelclass]
+        if 'class' in self.options:
+            classes.extend(self.options['class'])
+
+        model_name = self.arguments[0]
+        text = get_model_data(model_name, show_info)
+        if text is None:
+            return [self.state_machine.reporter.warning(
+                    'Model "%s" not found.' % model_name, line=self.lineno)]
+
+        return [nodes.inline(text, text, classes=classes)]
 
 
 class FieldDirective(Directive):
@@ -440,6 +480,7 @@ def remove_temporary_files(app, exception):
 def setup(app):
     app.add_config_value('trydoc_plaintext', True, 'env')
     app.add_config_value('trydoc_pattern', re.compile(r'@(.|[^@]+)@'), 'env')
+    app.add_config_value('trydoc_modelclass', 'trydocmodel', 'env')
     app.add_config_value('trydoc_fieldclass', 'trydocfield', 'env')
     app.add_config_value('trydoc_refclass', 'trydocref', 'env')
     app.add_config_value('trydoc_viewclass', 'trydocview', 'env')
@@ -453,6 +494,7 @@ def setup(app):
     app.add_config_value('tryton_default_height', 1024, 'env')
     # app.add_config_value('verbose', False, 'env'),
 
+    app.add_directive('model', ModelDirective)
     app.add_directive('field', FieldDirective)
     app.add_directive('tryref', TryRefDirective)
     app.add_directive('view', ViewDirective)
