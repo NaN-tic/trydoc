@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
@@ -24,6 +25,7 @@ import tryton
 try:
     import gtk
     import gobject
+    import signal
 except ImportError, e:
     print >> sys.stderr, ("gtk importation error (%s). Screenshots feature "
         "will not be available.") % e
@@ -155,12 +157,22 @@ class TryRefDirective(Directive):
 
 
 class ViewDirective(Image):
+    # Directive attributes
     option_spec = Image.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
         'class': directives.class_option,
         })
+    # Class attributes
+    trytond_host = None
+    trytond_port = None
+    trytond_dbname = None
+    trytond_user = None
+    trytond_password = None
+    tryton_default_width = 2048
+    tryton_default_height = 1024
     tryton_main = None
+    # Instance attributes
     filename = None
 
     def run(self):
@@ -176,7 +188,7 @@ class ViewDirective(Image):
         view_xml_id = str(self.arguments[0])
         field_name = self.options.get('field')
 
-        tryton_main = ViewDirective.get_tryton_main()
+        tryton_main = self.get_tryton_main()
 
         url = self.calc_url(view_xml_id, field_name)
         if not url:
@@ -191,85 +203,120 @@ class ViewDirective(Image):
         screenshot_files.append(self.filename)
 
         # if app.config.verbose:
-        sys.stderr.write("Screenshot %s in tempfile %s"
+        sys.stderr.write("Screenshot %s in tempfile %s\n"
             % (url, self.filename))
         self.arguments[0] = path(self.filename).basename()
         image_node_list = Image.run(self)
         return image_node_list
 
-    @classmethod
-    def get_tryton_main(cls):
-        if cls.tryton_main is not None:
-            return cls.tryton_main
+    def get_tryton_main(self):
+        if ViewDirective.tryton_main is not None:
+            return ViewDirective.tryton_main
 
-        tryton_main = tryton.gui.Main(cls)
+        config = self.state.document.settings.env.config
+        proteus_instance = proteus.config._CONFIG.current
+        ViewDirective._get_tryton_configuration(config, proteus_instance)
 
-        cls.tryton_main = tryton_main
+        # Open session in server
+        # Now, it only works with local instances because it mixes RPC calls
+        # and trytond module importation
+        tryton.rpc.login(self.trytond_user,
+            self.trytond_password,
+            self.trytond_host,
+            self.trytond_port,
+            self.trytond_dbname)
+        # TODO: put some wait because sometimes the login window is raised
+
+        tryton_main = tryton.gui.Main(ViewDirective)
+        ViewDirective.tryton_main = tryton_main
+
+        tryton.common.ICONFACTORY.load_client_icons()
+
+        tryton_main._width = self.tryton_default_width
+        tryton_main._height = self.tryton_default_height
+        tryton_main.window.set_default_size(tryton_main._width,
+            tryton_main._height)
+        tryton_main.window.resize(tryton_main._width, tryton_main._height)
+
+        self.close_menu(tryton_main)
+        self.sig_login(tryton_main)
         return tryton_main
 
     @classmethod
-    def sig_login(cls, tryton_main):
-        # tryton.rpc.context_reload()
+    def _get_tryton_configuration(cls, config, proteus_instance):
+        cls.trytond_host = config.trytond_host
+        cls.trytond_port = (int(config.trytond_port) if config.trytond_port
+            else None)
+        cls.trytond_dbname = config.trytond_dbname
+        cls.trytond_user = config.trytond_user
+        cls.trytond_password = config.trytond_password
+        cls.tryton_default_width = config.tryton_default_width
+        cls.tryton_default_height = config.tryton_default_height
+
+
+        if proteus_instance.config_file and (not cls.trytond_host or
+                not cls.trytond_port):
+            trytond_config = ConfigParser.ConfigParser()
+            with open(proteus_instance.config_file, 'r') as f:
+                trytond_config.readfp(f)
+            if (trytond_config and
+                    trytond_config.get('options', 'jsonrpc', False) and
+                    len(trytond_config.get('options', 'jsonrpc').split(':'))
+                        == 2):
+                cls.trytond_host = (
+                    trytond_config.get('options', 'jsonrpc').split(':')[0])
+                cls.trytond_port = int(
+                    trytond_config.get('options', 'jsonrpc').split(':')[1])
+
+        if not cls.trytond_dbname and proteus_instance:
+            cls.trytond_dbname = proteus_instance.database_name
+
+    def close_menu(self, tryton_main):
+        if tryton_main.menu_expander.get_expanded():
+            tryton_main.menu_toggle()
+
+    def sig_login(self, tryton_main):
         prefs = tryton.common.RPCExecute('model', 'res.user',
             'get_preferences', False)
+
         tryton.common.ICONFACTORY.load_icons()
         tryton.common.MODELACCESS.load_models()
+        tryton.common.MODELHISTORY.load_history,
         tryton.common.VIEW_SEARCH.load_searches()
+
         if prefs and 'language_direction' in prefs:
             tryton.translate.set_language_direction(
                 prefs['language_direction'])
+
         tryton_main.sig_win_menu(prefs=prefs)
         tryton_main.set_title(prefs.get('status_bar', ''))
+
         if prefs and 'language' in prefs:
             tryton.translate.setlang(prefs['language'], prefs.get('locale'))
+            # if prefs['language'] != CONFIG['client.lang']
             tryton_main.set_menubar()
             tryton_main.favorite_unset()
+
         tryton_main.favorite_unset()
         tryton_main.menuitem_favorite.set_sensitive(True)
         tryton_main.menuitem_user.set_sensitive(True)
         return True
 
+    @classmethod
+    def force_quit(cls):
+        try:
+            tryton.rpc.logout()
+            gtk.main_quit()
+        except:
+            pass
+
     def calc_url(self, view_xml_id, field_name=None):
         module_name, fs_id = view_xml_id.split('.')
         view = get_ref_data(module_name, fs_id)
-
-        # TODO: Hack to get some ID of view model
-        Model = proteus.Model.get(view.model)
-        records = Model.find([], limit=1)
-        if not records:
-            sys.stderr.write("There isn't any record of %s so the screenshot "
-                "for view %s (field: %s) can't be done."
-                % (view.model, view_xml_id, field_name))
-            return None
-
-        return 'tryton://localhost:8000/%s/model/%s/%d' % (
-            proteus.config._CONFIG.current.database_name, view.model,
-            records[0].id)
+        return 'tryton://%s:%s/%s/model/%s;views=[%s]' % (self.trytond_host,
+            self.trytond_port, self.trytond_dbname, view.model, view.id)
 
     def screenshot(self, tryton_main, url):
-        config = self.state.document.settings.env.config
-        proteus_instance = proteus.config._CONFIG.current
-
-        trytond_port = 8000
-        if proteus_instance.config_file:
-            trytond_config = ConfigParser.ConfigParser()
-            with open(proteus_instance.config_file, 'r') as f:
-                trytond_config.readfp(f)
-            trytond_port = (
-                trytond_config.get('options', 'jsonrpc').split(':')[1]
-                if (trytond_config.get('options', 'jsonrpc', False) and
-                    len(trytond_config.get('options', 'jsonrpc').split(':'))
-                    == 2)
-                else 8000)
-
-        # Now, it only works with local instances because it mixes RPC calls
-        # and trytond module importation
-        tryton.rpc.login('admin', config.trytond_admin_password, 'localhost',
-            int(trytond_port), proteus_instance.database_name)
-        # TODO: put some wait because sometimes the login window is raised
-        ViewDirective.sig_login(tryton_main)
-
-        # Use: tryton://localhost/test/model/party.party
         tryton_main.open_url(url)
         gobject.timeout_add(6000, self.drawWindow, tryton_main.window)
         gtk.main()
@@ -291,7 +338,6 @@ class ViewDirective(Image):
             0, 0, 0, 0, width, height)
 
         screenshot.save(self.filename, 'png')
-        tryton.rpc.logout()
         gtk.main_quit()
         # Return False to stop the repeating interval
         return False
@@ -385,6 +431,7 @@ def init_transformer(app):
 
 
 def remove_temporary_files(app, exception):
+    ViewDirective.force_quit()
     for filename in screenshot_files:
         if os.path.exists(filename):
             os.remove(filename)
@@ -397,7 +444,13 @@ def setup(app):
     app.add_config_value('trydoc_refclass', 'trydocref', 'env')
     app.add_config_value('trydoc_viewclass', 'trydocview', 'env')
     app.add_config_value('trydoc_modules', [], 'env')
-    app.add_config_value('trytond_admin_password', 'admin', 'env')
+    app.add_config_value('trytond_host', 'localhost', 'env')
+    app.add_config_value('trytond_port', 8000, 'env')
+    app.add_config_value('trytond_dbname', None, 'env')
+    app.add_config_value('trytond_user', 'admin', 'env')
+    app.add_config_value('trytond_password', 'admin', 'env')
+    app.add_config_value('tryton_default_width', 2048, 'env')
+    app.add_config_value('tryton_default_height', 1024, 'env')
     # app.add_config_value('verbose', False, 'env'),
 
     app.add_directive('field', FieldDirective)

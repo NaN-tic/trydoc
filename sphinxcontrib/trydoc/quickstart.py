@@ -336,7 +336,7 @@ to generate the manual.'''
             'Use a persistent database to generate the manual (Y/n)', 'y',
                 boolean)
         if not d['persistent']:
-            d['trytond_admin_password'] = "admin"
+            d['trytond_password'] = "admin"
             d['set_trytond_params'] = "database_type='sqlite'"
         else:
             print '''
@@ -347,12 +347,12 @@ generate the dynamic information as field names, menus...'''
 
             print '''
 The admin password is required to connect to database.'''
-            do_prompt(d, 'trytond_admin_password', 'Admin password')
+            do_prompt(d, 'trytond_password', 'Admin password')
             print
 
             d['set_trytond_params'] = (
                 "'%s', database_type='postgresql', password='%s'"
-                % (d['database'], d['trytond_admin_password']))
+                % (d['database'], d['trytond_password']))
             del d['database']
         d['persistent']
 
