@@ -202,7 +202,7 @@ class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
-        'show_menu': directives.flag,
+        'show_menu': directives.unchanged,
         })
     # Class attributes
     trytond_host = None
@@ -213,6 +213,7 @@ class ViewDirective(Image):
     tryton_default_width = 2048
     tryton_default_height = 1024
     tryton_main = None
+    tryton_prefs = None
     # Instance attributes
     filename = None
 
@@ -244,7 +245,7 @@ class ViewDirective(Image):
         screenshot_files.append(self.filename)
 
         # if app.config.verbose:
-        sys.stderr.write("Screenshot %s in tempfile %s\n"
+        sys.stderr.write("INFO: Screenshot %s in tempfile %s\n"
             % (url, self.filename))
         self.arguments[0] = path(self.filename).basename()
         image_node_list = Image.run(self)
@@ -312,7 +313,31 @@ class ViewDirective(Image):
         if not cls.trytond_dbname and proteus_instance:
             cls.trytond_dbname = proteus_instance.database_name
 
-    def _open_menu(self, tryton_main):
+    def _open_menu(self, tryton_main, menuitem_xml_id=None):
+        if menuitem_xml_id is not None:
+            module_name, fs_id = menuitem_xml_id.split('.')
+            menuitem = get_ref_data(module_name, fs_id)
+            if menuitem is None:
+                sys.stderr.write("ERROR: view with XML ID '%s' doesn't "
+                    "exists.\n" % menuitem_xml_id)
+            else:
+                selected_nodes = [menuitem.id]
+                while menuitem.parent:
+                    menuitem = menuitem.parent
+                    selected_nodes.append(menuitem.id)
+
+                selected_nodes.reverse()
+                # Expanded nodes doesn't include the last item
+                expanded_nodes = [selected_nodes[:-p-1]
+                    for p in range(len(selected_nodes) - 1)]
+                expanded_nodes.reverse()
+
+                view = tryton_main.menu_screen.current_view
+                view.expand_nodes(expanded_nodes)
+                view.select_nodes([selected_nodes])
+                tryton_main.menu_screen.save_tree_state()
+                tryton_main.sig_win_menu(self.tryton_prefs)
+
         if not tryton_main.menu_expander.get_expanded():
             tryton_main.menu_toggle()
 
@@ -323,10 +348,11 @@ class ViewDirective(Image):
     def _login(self, tryton_main):
         prefs = tryton.common.RPCExecute('model', 'res.user',
             'get_preferences', False)
+        ViewDirective.tryton_prefs = prefs
 
         tryton.common.ICONFACTORY.load_icons()
         tryton.common.MODELACCESS.load_models()
-        tryton.common.MODELHISTORY.load_history,
+        tryton.common.MODELHISTORY.load_history()
         tryton.common.VIEW_SEARCH.load_searches()
 
         if prefs and 'language_direction' in prefs:
@@ -366,6 +392,8 @@ class ViewDirective(Image):
             self.trytond_port, self.trytond_dbname, view.model, view.id)
 
     def screenshot(self, tryton_main, url, field_name):
+        self._close_all_tabs(tryton_main)
+
         width = self.options.get('width', '').replace('px', '').strip()
         width = (int(width) if width and width.isdigit()
             else self.tryton_default_width)
@@ -374,18 +402,39 @@ class ViewDirective(Image):
             else self.tryton_default_height)
         tryton_main.window.resize(width, height)
 
-        if 'show_menu' in self.options:
-            self._open_menu(tryton_main)
+        tryton_main.open_url(url)
+
+        if self.options.get('show_menu'):
+            self._open_menu(tryton_main,
+                menuitem_xml_id=self.options['show_menu'])
         else:
             self._close_menu(tryton_main)
-
-        tryton_main.open_url(url)
 
         if field_name:
             gobject.timeout_add(2000, self.set_cursor, tryton_main, field_name)
 
         gobject.timeout_add(6000, self.draw_window, tryton_main.window)
         gtk.main()
+        return True
+
+    def _close_all_tabs(self, tryton_main):
+        res = True
+        while res:
+            wid = tryton_main.get_page()
+            if wid:
+                for dialog in wid.dialogs[:]:
+                    dialog.destroy()
+                # wid.screen.save_tree_state()
+                # wid.screen.current_view.set_value()
+                res = tryton_main._win_del()
+            else:
+                res = False
+        if tryton_main.menu_screen:
+            # tryton_main.menu_screen.save_tree_state()
+            tryton_main.menu_screen.destroy()
+            tryton_main.menu_screen = None
+        tryton_main.menu_expander_clear()
+        tryton_main.sig_win_menu(prefs=self.tryton_prefs)
         return True
 
     def set_cursor(self, tryton_main, field_name):
@@ -498,14 +547,14 @@ def init_transformer(app):
         for module_to_install in app.config.trydoc_modules:
             res = module_model.find([('name', '=', module_to_install)])
             # if app.config.verbose:
-            sys.stderr.write("Module found with name '%s': %s.\n"
+            sys.stderr.write("INFO: Module found with name '%s': %s.\n"
                     % (module_to_install, res))
             if res:
                 modules_to_install.append(res[0].id)
         if modules_to_install:
             proteus_context = proteus.config._CONFIG.current.context
             # if app.config.verbose:
-            sys.stderr.write("It will install the next modules: %s with "
+            sys.stderr.write("INFO: It will install the next modules: %s with "
                     "context %s.\n" % (modules_to_install,
                                 proteus_context))
             module_model.install(modules_to_install, proteus_context)
