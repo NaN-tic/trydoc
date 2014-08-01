@@ -111,14 +111,14 @@ def get_ref_data(module_name, fs_id, field=None):
 
 
 class ModelDirective(Directive):
-    has_content = True
     required_arguments = 1
-    optional_arguments = 1
+    optional_arguments = 0
     final_argument_whitespace = False
     option_spec = {
         'info': directives.flag,
         'class': directives.class_option,
         }
+    has_content = False
 
     def run(self):
         config = self.state.document.settings.env.config
@@ -140,14 +140,14 @@ class ModelDirective(Directive):
 
 
 class FieldDirective(Directive):
-    has_content = True
     required_arguments = 1
-    optional_arguments = 1
+    optional_arguments = 0
     final_argument_whitespace = False
     option_spec = {
         'help': directives.flag,
         'class': directives.class_option,
         }
+    has_content = False
 
     def run(self):
         config = self.state.document.settings.env.config
@@ -159,8 +159,7 @@ class FieldDirective(Directive):
         if 'class' in self.options:
             classes.extend(self.options['class'])
 
-        content = self.arguments[0]
-        model_name, field_name = content.split('/')
+        model_name, field_name = self.arguments[0].split('/')
         text = get_field_data(model_name, field_name, show_help)
         if text is None:
             return [self.state_machine.reporter.warning(
@@ -170,13 +169,13 @@ class FieldDirective(Directive):
 
 
 class TryRefDirective(Directive):
-    has_content = True
     required_arguments = 1
-    optional_arguments = 1
+    optional_arguments = 0
     final_argument_whitespace = False
     option_spec = {
         'class': directives.class_option,
         }
+    has_content = False
 
     def run(self):
         config = self.state.document.settings.env.config
@@ -184,8 +183,7 @@ class TryRefDirective(Directive):
         if 'class' in self.options:
             classes.extend(self.options['class'])
 
-        content = self.arguments[0]
-        ref, field = content.split('/')
+        ref, field = self.arguments[0].split('/')
         module_name, fs_id = ref.split('.')
 
         text = get_ref_data(module_name, fs_id, field)
@@ -198,6 +196,9 @@ class TryRefDirective(Directive):
 
 class ViewDirective(Image):
     # Directive attributes
+    required_arguments = 1
+    optional_arguments = 0
+    final_argument_whitespace = True
     option_spec = Image.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
@@ -353,10 +354,22 @@ class ViewDirective(Image):
     def calc_url(self, view_xml_id):
         module_name, fs_id = view_xml_id.split('.')
         view = get_ref_data(module_name, fs_id)
+        if view is None:
+            sys.stderr.write("ERROR: view with XML ID '%s' doesn't exists.\n"
+                % view_xml_id)
+            return ''
         return 'tryton://%s:%s/%s/model/%s;views=[%s]' % (self.trytond_host,
             self.trytond_port, self.trytond_dbname, view.model, view.id)
 
     def screenshot(self, tryton_main, url, field_name):
+        width = self.options.get('width', '').replace('px', '').strip()
+        width = (int(width) if width and width.isdigit()
+            else self.tryton_default_width)
+        height = self.options.get('height', '').replace('px', '').strip()
+        height = (int(height) if height and height.isdigit()
+            else self.tryton_default_height)
+        tryton_main.window.resize(width, height)
+
         tryton_main.open_url(url)
 
         if field_name:

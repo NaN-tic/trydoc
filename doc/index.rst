@@ -192,9 +192,10 @@ the generated screenshot.
    .. view:: party.party_party_form
       :field: name
 
-It also has the optional option ``:class: CLASSLIST`` which adds the specified
-class to the default class *trydocview* (which can be changed with the
-configuration option *trydoc_viewclass*).
+It also has all options of **image** directive: alt, height, width, scale,
+align, name, target, class... the ``:class: CLASSLIST`` option adds the
+specified class to the default class *trydocview* (which can be changed with
+the configuration option *trydoc_viewclass*).
 
 Inline usage
 ~~~~~~~~~~~~
