@@ -192,6 +192,9 @@ the generated screenshot.
    .. view:: party.party_party_form
       :field: name
 
+It have the option ``:show_menu:`` which toggle, for this screenshot, the menu
+to make it visible (by default, it is closed).
+
 It also has all options of **image** directive: alt, height, width, scale,
 align, name, target, class... the ``:class: CLASSLIST`` option adds the
 specified class to the default class *trydocview* (which can be changed with

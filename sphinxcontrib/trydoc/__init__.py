@@ -202,7 +202,7 @@ class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
-        'class': directives.class_option,
+        'show_menu': directives.flag,
         })
     # Class attributes
     trytond_host = None
@@ -279,8 +279,8 @@ class ViewDirective(Image):
             tryton_main._height)
         tryton_main.window.resize(tryton_main._width, tryton_main._height)
 
-        self.close_menu(tryton_main)
-        self.sig_login(tryton_main)
+        self._close_menu(tryton_main)
+        self._login(tryton_main)
         return tryton_main
 
     @classmethod
@@ -312,11 +312,15 @@ class ViewDirective(Image):
         if not cls.trytond_dbname and proteus_instance:
             cls.trytond_dbname = proteus_instance.database_name
 
-    def close_menu(self, tryton_main):
+    def _open_menu(self, tryton_main):
+        if not tryton_main.menu_expander.get_expanded():
+            tryton_main.menu_toggle()
+
+    def _close_menu(self, tryton_main):
         if tryton_main.menu_expander.get_expanded():
             tryton_main.menu_toggle()
 
-    def sig_login(self, tryton_main):
+    def _login(self, tryton_main):
         prefs = tryton.common.RPCExecute('model', 'res.user',
             'get_preferences', False)
 
@@ -369,6 +373,11 @@ class ViewDirective(Image):
         height = (int(height) if height and height.isdigit()
             else self.tryton_default_height)
         tryton_main.window.resize(width, height)
+
+        if 'show_menu' in self.options:
+            self._open_menu(tryton_main)
+        else:
+            self._close_menu(tryton_main)
 
         tryton_main.open_url(url)
 
