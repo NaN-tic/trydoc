@@ -10,6 +10,7 @@ from path import path
 import ConfigParser
 import os
 import re
+import simplejson
 import sys
 import tempfile
 import time
@@ -202,6 +203,7 @@ class ViewDirective(Image):
     option_spec = Image.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
+        'domain': directives.unchanged,
         'show_menu': directives.unchanged,
         })
     # Class attributes
@@ -221,18 +223,27 @@ class ViewDirective(Image):
         assert gtk is not None, "gtk not imported"
         assert gobject is not None, "gobject not imported"
 
-        config = self.state.document.settings.env.config
+        env = self.state.document.settings.env
         if 'class' in self.options:
-            self.options['class'].insert(0, config.trydoc_viewclass)
+            self.options['class'].insert(0, env.config.trydoc_viewclass)
         else:
-            self.options['class'] = [config.trydoc_viewclass]
+            self.options['class'] = [env.config.trydoc_viewclass]
 
         view_xml_id = str(self.arguments[0])
         field_name = self.options.get('field')
+        domain = self.options.get('domain')
+        try:
+            if domain:
+                domain = domain.replace("'", '"')
+                simplejson.loads(domain)
+        except ValueError:
+            env.warn(env.docname, "Invalid domain expression in view "
+                "directive. It isn't generated.", self.lineno)
+            return []
 
         tryton_main = self.get_tryton_main()
 
-        url = self.calc_url(view_xml_id)
+        url = self.calc_url(view_xml_id, domain=domain)
         if not url:
             return []
 
@@ -245,8 +256,12 @@ class ViewDirective(Image):
         screenshot_files.append(self.filename)
 
         # if app.config.verbose:
-        sys.stderr.write("INFO: Screenshot %s in tempfile %s\n"
-            % (url, self.filename))
+        if env.app:
+            env.app.info("Screenshot %s in tempfile %s"
+                % (url, self.filename))
+        else:
+            sys.stdout.write("INFO: Screenshot %s in tempfile %s\n"
+                % (url, self.filename))
         self.arguments[0] = path(self.filename).basename()
         image_node_list = Image.run(self)
         return image_node_list
@@ -381,15 +396,17 @@ class ViewDirective(Image):
         except:
             pass
 
-    def calc_url(self, view_xml_id):
+    def calc_url(self, view_xml_id, domain=None):
         module_name, fs_id = view_xml_id.split('.')
         view = get_ref_data(module_name, fs_id)
         if view is None:
             sys.stderr.write("ERROR: view with XML ID '%s' doesn't exists.\n"
                 % view_xml_id)
             return ''
-        return 'tryton://%s:%s/%s/model/%s;views=[%s]' % (self.trytond_host,
-            self.trytond_port, self.trytond_dbname, view.model, view.id)
+        domain_str = ('&domain=%s' % domain) if domain else ''
+        return 'tryton://%s:%s/%s/model/%s;views=[%s]%s' % (self.trytond_host,
+            self.trytond_port, self.trytond_dbname, view.model, view.id,
+            domain_str)
 
     def screenshot(self, tryton_main, url, field_name):
         self._close_all_tabs(tryton_main)

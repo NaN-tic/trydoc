@@ -184,6 +184,7 @@ You can add a screenshot of any model view with the following directive:
    .. view:: reference_to_view_xml_id
       :field: fieldname
       :show_menu: menu_xml_id
+      :domain: [CLAUSES]
 
 where ``:field:`` is optional and will ensure the given field name is shown in 
 the generated screenshot.
@@ -196,6 +197,12 @@ the generated screenshot.
 and ``:show_menu:`` is another option which toggle, for this screenshot, the
 menu to make it visible (by default, it is closed) and it expand the menu to
 show the specified menu item (it doesn't close previous opened menus).
+
+and ``:domain:`` option must to be a valid Tryton domain. It will be appended
+to the URL to open the propper window what will force the values of fields in
+domain.
+
+.. warning:: All values in the domain must to be in quotes, even True/False.
 
 It also has all options of `image directive`_: alt, height, width, scale,
 align, name, target, class... the ``:class: CLASSLIST`` option adds the

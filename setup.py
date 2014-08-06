@@ -9,6 +9,7 @@ with open('README') as stream:
 requires = [
     'path.py',
     'proteus',
+    'simplejson',
     'Sphinx>=1.0b2',
     ]
 

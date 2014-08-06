@@ -3,7 +3,13 @@
 * Get Tryton server connection params from configuration and also screenshots
   size
 * Add **model** directive to print model name
-* Implemented *field* attribute for **view** directive
+* Implemented *field* option in **view** directive
+* Use *height*/*width* options in **view** directive (inherited from Image
+  directive) to resize Tryton window before take the screenshot (it they are
+  not supplied, it use the values specified in configuration options).
+* Add *show_menu* option to **view** directive to unhide the menu and expand
+  and select the supplied menu item.
+* Add *domain* option to **view** directive to force values in some fields
 
 Version 0.5 2014-06-18
 * Add option parser to get modules from XML-RPC server
