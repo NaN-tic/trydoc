@@ -11,7 +11,7 @@ Installation
 
 This extension requires the following packages:
 
-- Sphinx 1.0
+- Sphinx 1.2
 - proteus
 - path.py
 - tryton
