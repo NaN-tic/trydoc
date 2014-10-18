@@ -1,3 +1,4 @@
+Version 0.6: 2014-10-18
 * Fix screenshot bug: allow to generate more than 3 screenshots
 * Fix screenshot bug: show icons correctly
 * Get Tryton server connection params from configuration and also screenshots

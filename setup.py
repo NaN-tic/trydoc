@@ -15,7 +15,7 @@ requires = [
 
 setup(
     name='trydoc',
-    version='0.5',
+    version='0.6',
     url='https://bitbucket.org/nantic/trydoc',
     download_url='http://pypi.python.org/pypi/trydoc',
     license='BSD',
