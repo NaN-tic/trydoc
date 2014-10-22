@@ -8,14 +8,17 @@ with open('README') as stream:
 
 requires = [
     'path.py',
-    'proteus',
+    'proteus>=3.2, <3.4',
     'simplejson',
     'Sphinx>=1.0b2',
     ]
+extra_require = {
+    'view directive': 'tryton>=3.2, <3.4',
+    }
 
 setup(
     name='trydoc',
-    version='0.6',
+    version='0.7',
     url='https://bitbucket.org/nantic/trydoc',
     download_url='http://pypi.python.org/pypi/trydoc',
     license='BSD',
@@ -46,5 +49,6 @@ setup(
         ],
     },
     install_requires=requires,
+    extras_require=extra_require,
     namespace_packages=['sphinxcontrib'],
 )

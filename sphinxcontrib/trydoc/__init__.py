@@ -22,16 +22,17 @@ from docutils.transforms import Transform
 from sphinx.util.compat import Directive
 
 import proteus
-import tryton
 try:
     import gtk
     import gobject
     import signal
+    import tryton
 except ImportError, e:
     print >> sys.stderr, ("gtk importation error (%s). Screenshots feature "
         "will not be available.") % e
     gtk = None
     gobject = None
+    tryton = None
 
 
 screenshot_files = []
@@ -222,6 +223,7 @@ class ViewDirective(Image):
     def run(self):
         assert gtk is not None, "gtk not imported"
         assert gobject is not None, "gobject not imported"
+        assert tryton is not None, "tryton not imported"
 
         env = self.state.document.settings.env
         if 'class' in self.options:
