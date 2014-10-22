@@ -191,7 +191,7 @@ class TryRefDirective(Directive):
         text = get_ref_data(module_name, fs_id, field)
         if text is None:
             return [self.state_machine.reporter.warning(
-                    'Reference "%s" not found.' % content, line=self.lineno)]
+                    'Reference "%s" not found.' % fs_id, line=self.lineno)]
 
         return [nodes.inline(text, text, classes=classes)]
 
