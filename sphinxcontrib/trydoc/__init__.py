@@ -221,9 +221,8 @@ class ViewDirective(Image):
     filename = None
 
     def run(self):
-        assert gtk is not None, "gtk not imported"
-        assert gobject is not None, "gobject not imported"
-        assert tryton is not None, "tryton not imported"
+        if not (gtk and gobject and tryton):
+            return []
 
         env = self.state.document.settings.env
         if 'class' in self.options:
