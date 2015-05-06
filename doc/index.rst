@@ -28,7 +28,7 @@ In order to use trydoc you should add it to the list of extensions in conf.py::
 
    extensions = ['sphinxcontrib.trydoc']
 
-You should also configure proteus in conf.py with the required parameters. The 
+You should also configure proteus in conf.py with the required parameters. The
 following example will create a new sqlite database automatically::
 
    import proteus
@@ -166,7 +166,7 @@ You can also access any field of the record, for example:
 
    .. tryref:: ir.menu_cron_form/name
 
-will output *Scheduled Actions*. **tryref** can be used to access any field of 
+will output *Scheduled Actions*. **tryref** can be used to access any field of
 any record with an *ir.model.data* if you know its XML id.
 
 Like field directive, it will output the text inside an _span_ tag with the
@@ -186,7 +186,7 @@ You can add a screenshot of any model view with the following directive:
       :show_menu: menu_xml_id
       :domain: [CLAUSES]
 
-where ``:field:`` is optional and will ensure the given field name is shown in 
+where ``:field:`` is optional and will ensure the given field name is shown in
 the generated screenshot.
 
 ::
