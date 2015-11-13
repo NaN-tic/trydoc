@@ -204,7 +204,7 @@ domain.
 
 .. warning:: All values in the domain must to be in quotes, even True/False.
 
-It also has all options of `digure directive`_: alt, height, width, scale,
+It also has all options of `figure directive`_: alt, height, width, scale,
 align, name, target, class... the ``:class: CLASSLIST`` option adds the
 specified class to the default class *trydocview* (which can be changed with
 the configuration option *trydoc_viewclass*).
