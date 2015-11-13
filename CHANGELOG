@@ -1,3 +1,4 @@
+* View directive inherit from Figure
 * Do not make gtk and tryton required even when using screenshots
 
 Version 0.6: 2014-10-18

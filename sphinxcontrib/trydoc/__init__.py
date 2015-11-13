@@ -17,7 +17,7 @@ import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from docutils.parsers.rst.directives.images import Image
+from docutils.parsers.rst.directives.images import Figure
 from docutils.transforms import Transform
 from sphinx.util.compat import Directive
 
@@ -196,12 +196,12 @@ class TryRefDirective(Directive):
         return [nodes.inline(text, text, classes=classes)]
 
 
-class ViewDirective(Image):
+class ViewDirective(Figure):
     # Directive attributes
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
-    option_spec = Image.option_spec.copy()
+    option_spec = Figure.option_spec.copy()
     option_spec.update({
         'field': directives.unchanged,
         'domain': directives.unchanged,
@@ -264,7 +264,7 @@ class ViewDirective(Image):
             sys.stdout.write("INFO: Screenshot %s in tempfile %s\n"
                 % (url, self.filename))
         self.arguments[0] = path(self.filename).basename()
-        image_node_list = Image.run(self)
+        image_node_list = Figure.run(self)
         return image_node_list
 
     def get_tryton_main(self):
