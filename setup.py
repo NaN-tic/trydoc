@@ -18,7 +18,7 @@ extra_require = {
 
 setup(
     name='trydoc',
-    version='0.8',
+    version='0.9',
     url='https://bitbucket.org/nantic/trydoc',
     download_url='http://pypi.python.org/pypi/trydoc',
     license='BSD',
