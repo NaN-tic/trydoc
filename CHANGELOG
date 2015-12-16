@@ -1,6 +1,9 @@
-Version 0.10: 2015-12-16
 * Fix generate translations in user language
+
+Version 0.8 - 2015-11-13
 * View directive inherit from Figure
+
+Version 0.8 - 2015-05-06
 * Do not make gtk and tryton required even when using screenshots
 
 Version 0.6: 2014-10-18
