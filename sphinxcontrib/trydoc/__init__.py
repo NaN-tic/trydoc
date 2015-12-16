@@ -364,6 +364,8 @@ class ViewDirective(Figure):
     def _login(self, tryton_main):
         prefs = tryton.common.RPCExecute('model', 'res.user',
             'get_preferences', False)
+        tryton_main.get_preferences()
+        # It's necessary next lines?
         ViewDirective.tryton_prefs = prefs
 
         tryton.common.ICONFACTORY.load_icons()
