@@ -26,7 +26,8 @@ try:
     import gtk
     import gobject
     import signal
-    import tryton
+    from tryton import rpc as tryton_rpc, gui as tryton_gui, \
+        common as tryton_common, translate as tryton_translate
 except ImportError, e:
     print >> sys.stderr, ("gtk importation error (%s). Screenshots feature "
         "will not be available.") % e
@@ -221,7 +222,7 @@ class ViewDirective(Figure):
     filename = None
 
     def run(self):
-        if not (gtk and gobject and tryton):
+        if not (gtk and gobject and tryton_rpc):
             return []
 
         env = self.state.document.settings.env
@@ -278,17 +279,17 @@ class ViewDirective(Figure):
         # Open session in server
         # Now, it only works with local instances because it mixes RPC calls
         # and trytond module importation
-        tryton.rpc.login(self.trytond_user,
+        tryton_rpc.login(self.trytond_user,
             self.trytond_password,
             self.trytond_host,
             self.trytond_port,
             self.trytond_dbname)
         # TODO: put some wait because sometimes the login window is raised
 
-        tryton_main = tryton.gui.Main(ViewDirective)
+        tryton_main = tryton_gui.Main(ViewDirective)
         ViewDirective.tryton_main = tryton_main
 
-        tryton.common.ICONFACTORY.load_client_icons()
+        tryton_common.ICONFACTORY.load_client_icons()
 
         tryton_main._width = self.tryton_default_width
         tryton_main._height = self.tryton_default_height
@@ -362,26 +363,26 @@ class ViewDirective(Figure):
             tryton_main.menu_toggle()
 
     def _login(self, tryton_main):
-        prefs = tryton.common.RPCExecute('model', 'res.user',
+        prefs = tryton_common.RPCExecute('model', 'res.user',
             'get_preferences', False)
         tryton_main.get_preferences()
         # It's necessary next lines?
         ViewDirective.tryton_prefs = prefs
 
-        tryton.common.ICONFACTORY.load_icons()
-        tryton.common.MODELACCESS.load_models()
-        tryton.common.MODELHISTORY.load_history()
-        tryton.common.VIEW_SEARCH.load_searches()
+        tryton_common.ICONFACTORY.load_icons()
+        tryton_common.MODELACCESS.load_models()
+        tryton_common.MODELHISTORY.load_history()
+        tryton_common.VIEW_SEARCH.load_searches()
 
         if prefs and 'language_direction' in prefs:
-            tryton.translate.set_language_direction(
+            tryton_translate.set_language_direction(
                 prefs['language_direction'])
 
         tryton_main.sig_win_menu(prefs=prefs)
         tryton_main.set_title(prefs.get('status_bar', ''))
 
         if prefs and 'language' in prefs:
-            tryton.translate.setlang(prefs['language'], prefs.get('locale'))
+            tryton_translate.setlang(prefs['language'], prefs.get('locale'))
             # if prefs['language'] != CONFIG['client.lang']
             tryton_main.set_menubar()
             tryton_main.favorite_unset()
@@ -394,7 +395,7 @@ class ViewDirective(Figure):
     @classmethod
     def force_quit(cls):
         try:
-            tryton.rpc.logout()
+            tryton_rpc.logout()
             gtk.main_quit()
         except:
             pass

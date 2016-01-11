@@ -8,12 +8,12 @@ with open('README') as stream:
 
 requires = [
     'path.py',
-    'proteus>=3.2, <3.4',
+    'proteus>=3.2',
     'simplejson',
     'Sphinx>=1.0b2',
     ]
 extra_require = {
-    'view directive': 'tryton>=3.2, <3.4',
+    'view directive': 'tryton>=3.2',
     }
 
 setup(
