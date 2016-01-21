@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
+import sphinxcontrib.trydoc
 
 with open('README') as stream:
     long_desc = stream.read()
 
 
+version = sphinxcontrib.trydoc.__version__
 requires = [
     'path.py',
     'proteus>=3.2',
@@ -18,7 +20,7 @@ extra_require = {
 
 setup(
     name='trydoc',
-    version='0.10',
+    version=version,
     url='https://bitbucket.org/nantic/trydoc',
     download_url='http://pypi.python.org/pypi/trydoc',
     license='BSD',

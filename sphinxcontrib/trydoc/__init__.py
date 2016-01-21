@@ -3,9 +3,11 @@
     trydoc
     ------
 
-    :copyright: Copyright 2012-14 by NaN Projectes de Programari Lliure, S.L.
+    :copyright: Copyright 2012-16 by NaN Projectes de Programari Lliure, S.L.
     :license: BSD, see LICENSE for details.
 """
+__version__ = "0.11"
+
 from path import path
 import ConfigParser
 import os
