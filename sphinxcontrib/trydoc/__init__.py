@@ -23,7 +23,10 @@ from docutils.parsers.rst.directives.images import Figure
 from docutils.transforms import Transform
 from sphinx.util.compat import Directive
 
-import proteus
+try:
+    import proteus
+except ImportError:
+    proteus = None
 try:
     import gtk
     import gobject
@@ -41,12 +44,55 @@ except ImportError, e:
 screenshot_files = []
 
 
-def get_model_data(model_name, show_info):
-    if not proteus.config._CONFIG.current:
-        raise ValueError('Proteus has not been initialized.')
+def from_trytond():
+    try:
+        from trytond.transaction import Transaction
+        t = Transaction()
+        return t.user is not None
+    except ImportError:
+        return False
 
-    Model = proteus.Model.get('ir.model')
-    models = Model.find([
+
+def tryton_model(name):
+    if from_trytond():
+        from trytond.pool import Pool
+        pool = Pool()
+        return pool.get(name)
+    else:
+        if proteus is None:
+            raise ValueError('Proteus not found')
+        elif not proteus.config._CONFIG.current:
+            raise ValueError('Proteus has not been initialized.')
+        return proteus.Model.get(name)
+
+
+def tryton_find(model_name, domain, *args, **kwargs):
+    model = tryton_model(model_name)
+    if from_trytond():
+        method = getattr(model, 'search')
+    else:
+        method = getattr(model, 'find')
+    return method(domain, *args, **kwargs)
+
+
+def get_tryton_record(module_name, fs_id):
+    records = tryton_find('ir.model.data', [
+            ('module', '=', module_name),
+            ('fs_id', '=', fs_id),
+            ])
+    if not records:
+        return None
+
+    db_id = records[0].db_id
+    # model cannot be unicode
+    model = str(records[0].model)
+
+    Model = tryton_model(model)
+    return Model(db_id)
+
+
+def get_model_data(model_name, show_info):
+    models = tryton_find('ir.model', [
             ('model', '=', model_name),
             ])
     if not models:
@@ -57,18 +103,13 @@ def get_model_data(model_name, show_info):
 
 
 def get_field_data(model_name, field_name, show_help):
-    if not proteus.config._CONFIG.current:
-        raise ValueError('Proteus has not been initialized.')
-
-    Model = proteus.Model.get('ir.model')
-    models = Model.find([
+    models = tryton_find('ir.model', [
             ('model', '=', model_name),
             ])
     if not models:
         return None
 
-    ModelField = proteus.Model.get('ir.model.field')
-    fields = ModelField.find([
+    fields = tryton_find('ir.model.field', [
             ('name', '=', field_name),
             ('model', '=', models[0].id),
             ], limit=1)
@@ -93,24 +134,8 @@ def get_field_data(model_name, field_name, show_help):
 
 
 def get_ref_data(module_name, fs_id, field=None):
-    if not proteus.config._CONFIG.current:
-        raise ValueError('Proteus has not been initialized.')
-    ModelData = proteus.Model.get('ir.model.data')
-
-    records = ModelData.find([
-            ('module', '=', module_name),
-            ('fs_id', '=', fs_id),
-            ])
-    if not records:
-        return None
-
-    db_id = records[0].db_id
-    # model cannot be unicode
-    model = str(records[0].model)
-
-    Model = proteus.Model.get(model)
-    record = Model(db_id)
-    if field:
+    record = get_tryton_record(module_name, fs_id)
+    if record and field:
         return getattr(record, field)
     return record
 

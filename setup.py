@@ -10,12 +10,12 @@ with open('README') as stream:
 version = sphinxcontrib.trydoc.__version__
 requires = [
     'path.py',
-    'proteus>=3.2',
     'simplejson',
     'Sphinx>=1.0b2',
     ]
 extra_require = {
     'view directive': 'tryton>=3.2',
+    'proteus': 'proteus>=3.2',
     }
 
 setup(
