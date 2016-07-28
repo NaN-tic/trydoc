@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from setuptools import setup, find_packages
 import sphinxcontrib.trydoc
 
@@ -11,11 +10,11 @@ version = sphinxcontrib.trydoc.__version__
 requires = [
     'path.py',
     'simplejson',
-    'Sphinx>=1.0b2',
+    'Sphinx >= 1.0b2'
     ]
 extra_require = {
-    'view directive': 'tryton>=3.2',
-    'proteus': 'proteus>=3.2',
+    'view directive': ['tryton >= 3.2'],
+    'proteus': ['proteus >= 3.2'],
     }
 
 setup(
@@ -53,4 +52,5 @@ setup(
     install_requires=requires,
     extras_require=extra_require,
     namespace_packages=['sphinxcontrib'],
+    use2to3=True,
 )

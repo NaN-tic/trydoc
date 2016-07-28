@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 """
     trydoc
     ------
@@ -9,13 +10,15 @@
 __version__ = "0.11"
 
 from path import path
-import ConfigParser
 import os
 import re
 import simplejson
 import sys
 import tempfile
-import time
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
 from docutils import nodes
 from docutils.parsers.rst import directives
@@ -30,12 +33,11 @@ except ImportError:
 try:
     import gtk
     import gobject
-    import signal
     from tryton import rpc as tryton_rpc, gui as tryton_gui, \
         common as tryton_common, translate as tryton_translate
-except ImportError, e:
-    print >> sys.stderr, ("gtk importation error (%s). Screenshots feature "
-        "will not be available.") % e
+except ImportError:
+    print("gtk importation error: Screenshots feature will not be available.",
+        file=sys.stderr)
     gtk = None
     gobject = None
     tryton = None
@@ -339,10 +341,9 @@ class ViewDirective(Figure):
         cls.tryton_default_width = config.tryton_default_width
         cls.tryton_default_height = config.tryton_default_height
 
-
         if proteus_instance.config_file and (not cls.trytond_host or
                 not cls.trytond_port):
-            trytond_config = ConfigParser.ConfigParser()
+            trytond_config = ConfigParser()
             with open(proteus_instance.config_file, 'r') as f:
                 trytond_config.readfp(f)
             if (trytond_config and
