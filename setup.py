@@ -52,5 +52,5 @@ setup(
     install_requires=requires,
     extras_require=extra_require,
     namespace_packages=['sphinxcontrib'],
-    use2to3=True,
+    use_2to3=True,
 )
