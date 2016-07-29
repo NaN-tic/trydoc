@@ -7,7 +7,6 @@ from __future__ import print_function
     :copyright: Copyright 2012-16 by NaN Projectes de Programari Lliure, S.L.
     :license: BSD, see LICENSE for details.
 """
-__version__ = "0.11"
 
 from path import path
 import os

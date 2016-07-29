@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
-import sphinxcontrib.trydoc
 
 with open('README') as stream:
     long_desc = stream.read()
 
 
-version = sphinxcontrib.trydoc.__version__
+version = "0.11"
 requires = [
     'path.py',
     'simplejson',
