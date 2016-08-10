@@ -49,7 +49,7 @@ copyright = u'2012, NaN Projectes de Programari Lliure, S.L.'
 # built documents.
 #
 # The short X.Y version.
-version = sphinxcontrib.trydoc.__version__
+version = '0.11'
 # The full version, including alpha/beta/rc tags.
 release = version
 
