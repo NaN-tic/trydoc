@@ -49,7 +49,7 @@ copyright = u'2012, NaN Projectes de Programari Lliure, S.L.'
 # built documents.
 #
 # The short X.Y version.
-version = '0.11'
+version = '0.12'
 # The full version, including alpha/beta/rc tags.
 release = version
 

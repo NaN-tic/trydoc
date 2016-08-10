@@ -5,7 +5,7 @@ with open('README') as stream:
     long_desc = stream.read()
 
 
-version = "0.11"
+version = "0.12"
 requires = [
     'path.py',
     'simplejson',
