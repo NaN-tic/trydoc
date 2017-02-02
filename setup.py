@@ -5,11 +5,11 @@ with open('README') as stream:
     long_desc = stream.read()
 
 
-version = "0.12"
+version = "0.13"
 requires = [
-    'path.py',
+    'path.py>=10.0',
     'simplejson',
-    'Sphinx >= 1.0b2'
+    'Sphinx>=1.0b2'
     ]
 extra_require = {
     'view directive': ['tryton >= 3.2'],

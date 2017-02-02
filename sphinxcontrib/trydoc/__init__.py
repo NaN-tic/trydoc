@@ -8,7 +8,7 @@ from __future__ import print_function
     :license: BSD, see LICENSE for details.
 """
 
-from path import path
+from path import Path
 import os
 import re
 import simplejson
@@ -277,7 +277,7 @@ class ViewDirective(Figure):
         if not url:
             return []
 
-        source_document_path = path(self.state.document.current_source)
+        source_document_path = Path(self.state.document.current_source)
         prefix = 'screenshot-' + source_document_path.basename().split('.')[0]
         _, self.filename = tempfile.mkstemp(prefix=prefix,
             suffix='.png', dir=source_document_path.parent)
@@ -292,7 +292,7 @@ class ViewDirective(Figure):
         else:
             sys.stdout.write("INFO: Screenshot %s in tempfile %s\n"
                 % (url, self.filename))
-        self.arguments[0] = path(self.filename).basename()
+        self.arguments[0] = Path(self.filename).basename()
         image_node_list = Figure.run(self)
         return image_node_list
 

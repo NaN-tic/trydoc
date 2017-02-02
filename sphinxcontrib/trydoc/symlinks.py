@@ -20,7 +20,7 @@
 import argparse
 import glob
 import sys
-from path import path
+from path import Path
 from sphinx.util.console import bold, nocolor, color_terminal
 
 from .quickstart import choice, do_prompt, is_path
@@ -36,17 +36,17 @@ except NameError:
 def create_symlinks(modules_path, lang, root, remove=True):
     if remove:
         # Removing existing symlinks
-        for root_file in path(root).listdir():
+        for root_file in Path(root).listdir():
             if root_file.islink():
                 print "removing %s" % root_file
                 root_file.remove()
 
     for module_doc_dir in glob.glob('%s/*/doc/%s' % (modules_path, lang)):
         print "symlink to %s" % module_doc_dir
-        module_name = str(path(module_doc_dir).parent.parent.basename())
-        symlink = path(root).joinpath(module_name)
+        module_name = str(Path(module_doc_dir).parent.parent.basename())
+        symlink = Path(root).joinpath(module_name)
         if not symlink.exists():
-            path(root).relpathto(path(module_doc_dir)).symlink(symlink)
+            Path(root).relpathto(Path(module_doc_dir)).symlink(symlink)
 
 
 def main(argv=sys.argv):
