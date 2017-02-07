@@ -9,7 +9,7 @@ version = "0.13"
 requires = [
     'path.py>=10.0',
     'simplejson',
-    'Sphinx>=1.0b2'
+    'Sphinx<=1.4.9',
     ]
 extra_require = {
     'view directive': ['tryton >= 3.2'],
