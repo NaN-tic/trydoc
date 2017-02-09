@@ -11,10 +11,10 @@ Installation
 
 This extension requires the following packages:
 
-- Sphinx >= 1.2
-- proteus 3.2.x
-- path.py
-- tryton 3.2.x (optional if you don't need ``view`` directive)
+- path.py>=10.0
+- Sphinx<=1.4.9
+- proteus 
+- tryton (GTK client - optional if you don't need ``view`` directive)
 
 Use ``pip`` to install this extension straight from the Python Package Index::
 
