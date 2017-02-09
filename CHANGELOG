@@ -1,3 +1,11 @@
+Version 0.13 - 2017-02-09
+* Upgrade path.py>=10.0 and depends sphinx<=1.4.9
+
+Version 0.12 - 2016-08-10
+* Add python3 support
+* Try to access current tryton transaction if available
+
+Version 0.11 - 2016-01-21
 * Add compatibility with 3.8
 
 Version 0.10 - 2015-12-16
